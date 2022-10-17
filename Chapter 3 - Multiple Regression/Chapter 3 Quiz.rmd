@@ -1,0 +1,50 @@
+---
+title: "R Notebook"
+output: html_document
+---
+
+# Chapter 3 Quiz
+
+*Initialization*
+```{r}
+setwd("C:/Users/slhscs402/IdeaProjects/DataScience/Chapter 3 - Multiple Regression")
+conditionplots<-function(x, responsename, predictorname){
+  response <- x[[responsename]]
+  predictor <- x[[predictorname]]
+  linreg <- lm(response~predictor)
+  par(mfrow=c(2,2))
+  plot(response~predictor, ylab=responsename, xlab=predictorname, main = paste(responsename, "by", predictorname))
+  abline(linreg)
+  hist(linreg$residuals, xlab="Residuals", main="Histogram of residuals")
+  plot(linreg$residuals~linreg$fitted.values, xlab="Fitted values", ylab="Residuals")
+  qqnorm(linreg$residuals)
+  qqline(linreg$residuals)
+}
+```
+
+## 1
+
+### a
+
+Using the equation, the model predicts that a student with perfect scores on both the midterm and the project would get a 11.0 + 0.53 * 100 + 1.20 * 30 = 100 on the final
+
+### b
+
+The model predicts that Michael would get a 11.0 + .53 * 87 + 1.2 * 21 = 82.31 on the final. If he got a 87 in reality, his residual would be 80 - 82.31 = -2.31 points. That is, our model overestimates his actual final score by 2.31 points.
+
+## 2
+
+### a
+
+\[\beta_1\] Every additional point someone gets on the midterm,
+
+
+
+
+
+
+
+
+
+
+
