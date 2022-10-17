@@ -7,7 +7,7 @@ output: html_document
 
 *Initialization*
 ```{r}
-setwd("C:/Users/slhscs402/IdeaProjects/DataScience/Chapter 3 - Multiple Regression")
+setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience")
 conditionplots<-function(x, responsename, predictorname){
   response <- x[[responsename]]
   predictor <- x[[predictorname]]
@@ -36,7 +36,12 @@ The model predicts that Michael would get a 11.0 + .53 * 87 + 1.2 * 21 = 82.31 o
 
 ### a
 
-\[\beta_1\] Every additional point someone gets on the midterm,
+$\beta_1 = 0.53$. Every additional point someone gets on the midterm, the predicted final score would increase by 0.53 points.
+
+### b
+
+$\beta_2 = 1.2$. Every additional point someone gets on the project, the predicted final score would increase by 1.2 points.
+
 
 
 
