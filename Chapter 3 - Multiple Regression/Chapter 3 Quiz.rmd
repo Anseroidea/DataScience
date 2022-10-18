@@ -6,9 +6,13 @@ output: html_document
 # Chapter 3 Quiz
 
 *Initialization*
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+#setwd()
+opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+```
 ```{r}
-setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience")
-conditionplots<-function(x, responsename, predictorname){
+linreg.conditionplots<-function(x, responsename, predictorname){
   response <- x[[responsename]]
   predictor <- x[[predictorname]]
   linreg <- lm(response~predictor)
@@ -30,17 +34,139 @@ Using the equation, the model predicts that a student with perfect scores on bot
 
 ### b
 
-The model predicts that Michael would get a 11.0 + .53 * 87 + 1.2 * 21 = 82.31 on the final. If he got a 87 in reality, his residual would be 80 - 82.31 = -2.31 points. That is, our model overestimates his actual final score by 2.31 points.
+The model predicts that Michael would get a 11.0 + .53 * 87 + 1.2 * 21 = 82.31 on the final. If he got an 80 in reality, his residual would be 80 - 82.31 = -2.31 points. That is, our model overestimates his actual final score by 2.31 points.
 
 ## 2
 
 ### a
 
-$\beta_1 = 0.53$. Every additional point someone gets on the midterm, the predicted final score would increase by 0.53 points.
+$\hat{\beta_1} = 0.53$. When $Midterm$ increases by 1, $\hat{Final}$ increases by 0.53 points as $Midterm$ is free to vary linearly.
 
 ### b
 
-$\beta_2 = 1.2$. Every additional point someone gets on the project, the predicted final score would increase by 1.2 points.
+$\hat{\beta_2} = 1.2$. When $Project$ increases by 1, $\hat{Final}$ increases by 1.2 points as $Project$ is free to vary linearly.
+
+### c
+
+No it does not. The strength of a relationship is determined by correlation, not slope. Thus, we do not have enough information to compare the strength of the relationships.
+
+## 3
+
+### a
+
+True. The adjusted R-squared is defined as $1 - \left ( \frac{SSE}{SSTotal} \right ) \left ( \frac{n - 1}{n - k - 1} \right )$. If (and it does) $R_{adj}^2 < R^2$, then $1 - \left ( \frac{SSE}{SSTotal} \right ) \left ( \frac{n - 1}{n - k - 1} \right ) < 1 - \left ( \frac{SSE}{SSTotal} \right )$. Subtracting both sides by 1 and multiplying by -1, we get $\left ( \frac{SSE}{SSTotal} \right ) \left ( \frac{n - 1}{n - k - 1} \right ) > \left ( \frac{SSE}{SSTotal} \right )$. Finally, we divide by $\frac{SSE}{SSTotal}$ (which is always positive), and we get $\left ( \frac{n - 1}{n - k - 1} \right ) > 1$. Multiplying both sides by $n - k - 1$, we get $n - 1 > n - k - 1$. Adding $k + 1 - n$ to both sides, we result with $k > 0$ which is always true in multiple regression.
+
+### b
+
+False. Adding weak predictors can decrease the $R^2$ adjusted.
+
+### c
+
+True. The unadjusted $R^2$ will never decrease. Instead, the fit will always be better when more predictors are added. An LSRL is made to minimize the sum of the squares of the residuals, defined as $\sum_{i=1}^{n} (y_i - \beta_0 - \beta_1x_{i,1} - ... - \beta_nx_{n,1})$. With a new predictor, this minimization is instead applied to $\sum_{i=1}^{n} (y_i - \beta_0 - \beta_1x_{i,1} - ... - \beta_nx_{n,1} - \beta_{n+1}x_{n+1,1} )$. If the new predictor instead increases the sum of the residuals at any slope, then the LSRL will define $\beta_{n+1}$ to 0. In this case, the SSE is not changed from before the new predictor was introduced. In all cases then, the SSE either reduces or stays constant, meaning that $R^2$ will stay constant or increase. Basically, $R^2$ will never decrease.
+
+### d
+
+False. It is possible that $X_2$ is a weak predictor. In linear regression, $R^2 = R_{adj}^2$. Thus, $R_{adj_1}^2 = R_1^2$. However, using the fact that adding weak predictors decreases $R_{adj}^2$, adding $X_2$ would mean that the $R_{adj}^2$ in a regression with both predictors would be less than $R_{adj_1}^2$ and thus $R_1^2$. Thus, the assertion is false.
+
+## 4
+
+*Setting up data*
+```{r}
+MathEnrollment.df <- read.csv("MathEnrollment.csv", header=T)
+attach(MathEnrollment.df)
+MathEnrollment.lm <- lm(Spring~Fall+AYear)
+summary(MathEnrollment.lm)
+```
+
+### a
+
+27.73% of the variability in Spring enrollment can be explained by the variation in both Fall and AYear.
+
+### b
+
+$\sigma_\epsilon = 31.09$, a typical residual has a value of 31.09 students.
+
+### c
+
+Our hypotheses are:
+\[H_{0}:\beta_1 = \beta_2 =0\]\[H_{a}:\beta_i\neq0\]
+
+From the summary output in 4a, we can see that we get an F-value of 1.535 which associates with a p-value of 0.2728. This result is not statistically significant at the alpha = 0.05 (or anything more selective) level. Thus, we do not have convincing evidence to suggest that the true slope coefficients are not zero. The model is not valid.
+
+### d
+
+We do two tests for each regression coefficient:
+
+#### $\beta_1$
+
+Hypotheses:
+\[H_{0}:\beta_1 =0\]\[H_{a}:\beta_1\neq0\]
+
+From the summary output in 4a, we get a t-value of -0.563 for the Fall explanatory which corresponds to a p-value of 0.589, not statistically significant. As our p-value is greater than alpha = 0.05, we do not have convincing evidence to suggest that the true slope coefficient for the Fall explanatory is not zero.
+
+#### $\beta_2$
+
+Hypotheses:
+\[H_{0}:\beta_2 =0\]\[H_{a}:\beta_2\neq0\]
+
+From the summary output in 4a, we get a t-value of 1.481 for the AYear explanatory which corresponds to a p-value of 0.177, not statistically significant. As our p-value is greater than alpha = 0.05, we do not have convincing evidence to suggest that the true slope coefficient for the AYear explanatory is not zero.
+
+## 5
+
+```{r}
+detach()
+BritishUnions.df <- read.csv("BritishUnions.csv", header=T)
+attach(BritishUnions.df)
+linreg.conditionplots(BritishUnions.df,  "NetSupport", "Months")
+```
+
+### a
+There are two clusters in the scatterplot. The histogram of the residuals is very roughly unimodal (almost bimodal) and very roughly symmetric. There is about an equal spread of residuals about the resid = 0 line without pattern in the residual scatterplot. The residuals very very roughly follow the normal line. We proceed with caution.
+
+Our hypotheses:
+
+\[H_{0}:\beta =0\]\[H_{a}:\beta\neq0\]
+
+```{r}
+BritishUnions.lm <- lm(NetSupport~Months)
+summary(BritishUnions.lm)
+```
+
+We get a t-value of 14.88 which corresponds to an F-value of 2.19E-10. This is significant at the alpha = 0.05 level as this p-value is less than 0.05. Thus, we have convincing evidence to suggest that the true coefficient on the Months explanatory is not 0.
+
+### b
+
+```{r}
+BritishUnions.multlm <- lm(NetSupport~Months+Late)
+plot(NetSupport~Months, col = ifelse(Late == 1, "red", "blue"))
+coeff <- BritishUnions.multlm$coefficients
+abline(coeff[1],coeff[2],col="blue")
+abline(coeff[1]+coeff[3],coeff[2],col="red")
+summary(BritishUnions.multlm)
+```
+
+Our multiple regression equation is $\hat{NetSupport} = -70.04 + 0.268Months + 39.69Late$
+
+### c
+
+Our hypotheses:
+
+\[H_{0}:\beta_2 =0\]\[H_{a}:\beta_2\neq0\]
+
+If $\beta_2$ is 0, then a single regression line can represent both early and late datasets. If not, then there each dataset has its own line with the same slope.
+
+Using output from 5b, we can see that we get a t-value of 4.166 on Late, corresponding to a p-value of about 0. Thus we have convincing evidence that there is a difference in intercepts. The R^2 from 4a is 93.65% which is still lower than the multiple regression R^2 of 0.9717 or its adjusted R^2 of 0.9676.
+
+
+
+
+
+
+
+
+
+
+
 
 
 
