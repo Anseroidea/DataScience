@@ -1,0 +1,31 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r setup, include=FALSE, echo=FALSE}
+require("knitr")
+#setwd()
+opts_knit$set(root.dir = "C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+```
+
+```{r}
+setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+Clothing.df <- read.csv("Clothing.csv", header=T)
+attach(Clothing.df)
+multreg.conditionplots <- function(df, predictornames, responsename){
+  finalDf <- data.frame("a"=df[[predictornames[1]]])
+  names(finalDf)[1] <- predictornames[1]
+  for (index in seq_along(predictornames)) {
+    if (index > 1) {
+      finalDf$"a" <- df[[predictornames[index]]]
+      names(finalDf)[index] <- predictornames[index]
+    }
+  }
+  linreg2 <- lm(df[[responsename]] ~ ., data=finalDf)
+  hist(linreg2$residuals)
+}
+multreg.conditionplots(Clothing.df, c("Amount"), "Recency")
+linreg <- lm(Recency~Amount)
+hist(linreg$residuals)
+```
