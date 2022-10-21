@@ -6,10 +6,12 @@ output: html_notebook
 ```{r setup, include=FALSE, echo=FALSE}
 require(knitr)
 #setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
-knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+#knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
 ```
 
 ```{r}
+#setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
 Clothing.df <- read.csv("Clothing.csv", header=T)
 attach(Clothing.df)
 ```
@@ -82,20 +84,35 @@ Also, screw it, let's use every combination of predictor
 
 ```{r}
 attach(Clothing.df)
-linreg5 <- lm(Amount ~ (.)^2 + I(Dollar12^2) + I(Freq12 ^ 2) + I(Recency ^ 2) + I(Dollar24 ^ 2) + I(Freq24 ^ 2) + I(ID ^ 2), data = Clothing.df)
+linreg5 <- lm(Amount ~ polym(Dollar12, Freq12, degree = 2))
 summary(linreg5)
 ```
 
 The output above shows all the interaction terms that are possible in a full second order model (excluding when a predictor is multiplied by itself). Let's solely pick the predictors significant at a = 0.001.
 
 ```{r}
-library(car)
 linregtest <- lm(Amount ~ Dollar12 + Freq12)
 multreg.testpredictors <- function(df, linreg) {
   formula <- 0
   for (index in seq_along(summary(linreg)$aliased)) {
     name <- names(summary(linreg)$aliased)[index]
     pval <- as.numeric(summary(linreg)$coefficients[name, 4])
+    if (grepl("poly", name, fixed=TRUE)) {
+      name_list <- unlist(str_split(name, "\\(|\\)"))
+      variable_names <- unlist(str_split(name_list[2], "\\, "))
+      degrees <- unlist(str_split(name_list[3], "\\."))
+      var_formula <- 0
+      for (var_index in seq_along(variable_names)){
+        if (var_index < length(variable_names)) {
+          if (var_formula == 0) {
+            var_formula <- paste0("I(", paste0(variable_names[var_index], "^", degrees[var_index]))
+          } else {
+            var_formula <- paste(var_formula, "+", paste0(variable_names[var_index], "^", degrees[var_index]))
+          }
+        }
+      }
+      name <- paste0(var_formula, ")")
+    }
     if (pval < 0.1 & index > 1){
       if (formula == 0) {
         formula <- paste(names(linreg$model)[1], "~", name)
@@ -113,7 +130,7 @@ multreg.testpredictors <- function(df, linreg) {
     return(linreg.red)
   }
 }
-summary(multreg.testpredictors(Clothing.df, linreg5))
+summary(linreg5)
 summary(multreg.testpredictors(Clothing.df, multreg.testpredictors(Clothing.df, linreg5)))
 linreg6 <- lm(Amount ~ . - Freq12 - Freq24 - Recency - Dollar24 - Card + I((Dollar12/Freq12)^2) + I(Dollar12 ^2) + I(Freq12 ^ 2) + I(Recency ^ 2) + I(Dollar24 ^ 2) + I(Freq24 ^ 2) + I(ID ^ 2) + I(Card ^ 2), data = Clothing.df)
 ```
