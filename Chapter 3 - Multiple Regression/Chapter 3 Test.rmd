@@ -7,6 +7,7 @@ output: html_notebook
 require(knitr)
 #setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
 #knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
 knitr::opts_knit$set(root.dir = "C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
 ```
 
@@ -24,18 +25,8 @@ attach(Clothing.df)
 ```
 
 ```{r}
-multreg.conditionplots <- function(df, predictornames, responsename){
-  finalDf <- data.frame("a"=df[[predictornames[1]]]) #create a dataframe with the first column of the list that is given, establishes the amount of rows that will be in the data frame. df[["x"]] tells R to find a column with name "x" and return it
-  names(finalDf)[1] <- predictornames[1] #set the name of the column to its proper name
-  for (index in seq_along(predictornames)) {#iterate through all names given, use index to specify column
-    if (index > 1) { #we already added the column with index 1
-      finalDf$"a" <- df[[predictornames[index]]] #add column with name at index "i" in the passed list
-      names(finalDf)[index] <- predictornames[index] #set the name of earlier mentioned column to actual name
-    }
-  }
-  par(mfrow=c(2,2))
-  linreg <- lm(df[[responsename]] ~ ., data=finalDf) #takes the columns from finalDf (the data param) and uses all the columns (.) as predictors.
-  plot(df[[responsename]]~linreg$fitted.values, ylab=responsename, xlab="Fitted values", main = paste(responsename, "by Fitted values")) #filler plot to appease par's 2x2
+multreg.conditionplots <- function(linreg){
+  plot(linreg$fitted.values + linreg$residuals~linreg$fitted.values, ylab="Response", xlab="Fitted values", main = "Response by Fitted values") #filler plot to appease par's 2x2
   hist(linreg$residuals, xlab="Residuals", main="Histogram of residuals") #histogram of residuals
   plot(linreg$residuals~linreg$fitted.values, xlab="Fitted values", ylab="Residuals") #resid plot of residuals vs fitted values
   qqnorm(linreg$residuals) #the qqnorm plot of the residuals
@@ -68,7 +59,13 @@ linreg3 <- lm(Amount~Freq12*Dollar12)
 summary(linreg3)
 ```
 
-Although $R_{adj}^2$ increased by a minuscule amount, the Freq12:Dollar12 predictor does not seem to be statistically significant (P > 0.05). Maybe the average spent per trip (Dollar12/Freq12) will be useful as a predictor
+Although $R_{adj}^2$ increased by a minuscule amount, the Freq12:Dollar12 predictor does not seem to be statistically significant (P > 0.05). Another useful predictor may be Card. First, let's see if there is a significant difference in Amount spent between card-holders and non card-holders.
+
+```{r}
+hist(Clothing.df[Clothing.df$Card==0,]$Amount, Clothing.df[Clothing.df$Card==1,]$Amount, col = c("red","blue"))
+```
+
+Maybe the average spent per trip (Dollar12/Freq12) will be useful as a predictor
 
 ```{r}
 Clothing.df.f12NZ <- Clothing.df[Freq12 > 0,]
@@ -92,28 +89,29 @@ The output above shows all the interaction terms that are possible in a full sec
 
 ```{r}
 linregtest <- lm(Amount ~ Dollar12 + Freq12)
-multreg.testpredictors <- function(df, linreg) {
+multreg.testpredictors <- function(df, linreg, alpha) {
   formula <- 0
   for (index in seq_along(summary(linreg)$aliased)) {
     name <- names(summary(linreg)$aliased)[index]
     pval <- as.numeric(summary(linreg)$coefficients[name, 4])
+    summary(linreg)
     if (grepl("poly", name, fixed=TRUE)) {
-      name_list <- unlist(str_split(name, "\\(|\\)"))
-      variable_names <- unlist(str_split(name_list[2], "\\, "))
-      degrees <- unlist(str_split(name_list[3], "\\."))
+      name_list <- unlist(stringr::str_split(name, "\\(|\\)"))
+      variable_names <- unlist(stringr::str_split(name_list[2], "\\, "))
+      degrees <- unlist(stringr::str_split(name_list[3], "\\."))
       var_formula <- 0
       for (var_index in seq_along(variable_names)){
         if (var_index < length(variable_names)) {
           if (var_formula == 0) {
             var_formula <- paste0("I(", paste0(variable_names[var_index], "^", degrees[var_index]))
           } else {
-            var_formula <- paste(var_formula, "+", paste0(variable_names[var_index], "^", degrees[var_index]))
+            var_formula <- paste(var_formula, "*", paste0(variable_names[var_index], "^", degrees[var_index]))
           }
         }
       }
       name <- paste0(var_formula, ")")
     }
-    if (pval < 0.1 & index > 1){
+    if (pval < alpha & index > 1){
       if (formula == 0) {
         formula <- paste(names(linreg$model)[1], "~", name)
       } else {
@@ -124,14 +122,12 @@ multreg.testpredictors <- function(df, linreg) {
   if (formula == 0){
 
   } else {
-    print(formula)
     linreg.red <- lm(formula, data = df)
-    print(anova(linreg.red, linreg))
     return(linreg.red)
   }
 }
 summary(linreg5)
-summary(multreg.testpredictors(Clothing.df, multreg.testpredictors(Clothing.df, linreg5)))
+anova(multreg.testpredictors(Clothing.df, linreg5, 0.05), linreg5)
 linreg6 <- lm(Amount ~ . - Freq12 - Freq24 - Recency - Dollar24 - Card + I((Dollar12/Freq12)^2) + I(Dollar12 ^2) + I(Freq12 ^ 2) + I(Recency ^ 2) + I(Dollar24 ^ 2) + I(Freq24 ^ 2) + I(ID ^ 2) + I(Card ^ 2), data = Clothing.df)
 ```
 ```
