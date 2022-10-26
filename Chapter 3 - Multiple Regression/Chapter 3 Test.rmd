@@ -1,27 +1,34 @@
 ---
-title: "R Notebook"
+title: "Chapter 3 Test Work"
 output: html_notebook
 ---
 
 ```{r setup, include=FALSE, echo=FALSE}
 require(knitr)
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
 #setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
-#knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
-setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
-knitr::opts_knit$set(root.dir = "C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+#knitr::opts_knit$set(root.dir = "C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
 ```
 
 ```{r}
 #setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
 Clothing.df <- read.csv("Clothing.csv", header=T)
-attach(Clothing.df)
 ```
 
-*Removing people without relevant or accurate amounts*
+*Removing people without relevant or accurate amounts and initializing dataframes that are able to be logged*
 ```{r}
+detach()
+attach(Clothing.df)
 Clothing.df <- Clothing.df[Amount > 0 & Amount < 1000000,]
 detach()
 attach(Clothing.df)
+Clothing.df.f12NZ <- Clothing.df[Freq12 > 0,]
+Clothing.df.logD12F12 <- Clothing.df.f12NZ
+detach()
+attach(Clothing.df.f12NZ)
+Clothing.df.logD12F12$LogDollar12 <- log(Dollar12)
+Clothing.df.logD12F12$LogFreq12 <- log(Freq12)
 ```
 
 ```{r}
@@ -32,63 +39,6 @@ multreg.conditionplots <- function(linreg){
   qqnorm(linreg$residuals) #the qqnorm plot of the residuals
   qqline(linreg$residuals)
 }
-```
-
-## Finding a model
-
-Let's try every column as a predictor.
-
-```{r}
-linreg1 <- lm(Amount~.-Amount,data=Clothing.df)
-summary(linreg1)
-```
-
-Here, we see that only Freq12 and Dollar12 are significant. The $R_{adj}^2$ is 0.8689, for future reference.
-
-Now, let's solely use the significant predictors
-
-```{r}
-linreg2 <- lm(Amount ~ Freq12 + Dollar12)
-summary(linreg2)
-```
-
-$R_{adj}^2$ actually improved a small bit, meaning that the other predictors were probably not relevant. However, we can try better. Let's use a full second order model with Freq12 and Dollar12
-
-```{r}
-linreg3 <- lm(Amount~Freq12*Dollar12)
-summary(linreg3)
-```
-
-Although $R_{adj}^2$ increased by a minuscule amount, the Freq12:Dollar12 predictor does not seem to be statistically significant (P > 0.05). Another useful predictor may be Card. First, let's see if there is a significant difference in Amount spent between card-holders and non card-holders.
-
-```{r}
-hist(Clothing.df[Clothing.df$Card==0,]$Amount, Clothing.df[Clothing.df$Card==1,]$Amount, col = c("red","blue"))
-```
-
-Maybe the average spent per trip (Dollar12/Freq12) will be useful as a predictor
-
-```{r}
-Clothing.df.f12NZ <- Clothing.df[Freq12 > 0,]
-detach()
-attach(Clothing.df.f12NZ)
-linreg4 <- lm(Amount ~ Freq12 + Dollar12 + I(Dollar12/Freq12))
-summary(linreg4)
-```
-
-That's pretty significant! (p-value of Dollar12/Freq12 is tiny!). Since both the p-values Freq12 and Dollar12 increased, possibly some of Freq12 and Dollar12 can be expressed in Dollar12/Freq12
-
-Also, screw it, let's use every combination of predictor
-
-```{r}
-attach(Clothing.df)
-linreg5 <- lm(Amount ~ polym(Dollar12, Freq12, degree = 2))
-summary(linreg5)
-```
-
-The output above shows all the interaction terms that are possible in a full second order model (excluding when a predictor is multiplied by itself). Let's solely pick the predictors significant at a = 0.001.
-
-```{r}
-linregtest <- lm(Amount ~ Dollar12 + Freq12)
 multreg.testpredictors <- function(df, linreg, alpha) {
   formula <- 0
   for (index in seq_along(summary(linreg)$aliased)) {
@@ -126,8 +76,247 @@ multreg.testpredictors <- function(df, linreg, alpha) {
     return(linreg.red)
   }
 }
+residuals.plot<-function(linreg){
+  plot(linreg$residuals~linreg$fitted.values, xlab = "Fitted values", ylab = "Response")
+}
+```
+
+## Finding a model
+
+Let's try every column as a predictor.
+
+```{r}
+detach()
+attach(Clothing.df)
+linreg1 <- lm(Amount~.-Amount,data=Clothing.df)
+summary(linreg1)
+```
+
+Here, we see that only Freq12 and Dollar12 are significant. The $R_{adj}^2$ is 0.8689, for future reference.
+
+Now, let's solely use the significant predictors.
+
+```{r}
+linreg2 <- lm(Amount ~ Freq12 + Dollar12)
+summary(linreg2)
+```
+
+$R_{adj}^2$ actually improved a small bit, meaning that the other predictors were probably not relevant. However, we can try better. Let's use a full second order model with Freq12 and Dollar12.
+
+```{r}
+linreg3 <- lm(Amount~Freq12*Dollar12)
+summary(linreg3)
+```
+
+Although $R_{adj}^2$ increased by a minuscule amount, the Freq12:Dollar12 predictor does not seem to be statistically significant (P > 0.05). Let's try a full second order model then.
+
+```{r}
+detach()
+attach(Clothing.df)
+linreg5 <- multreg.testpredictors(Clothing.df, multreg.testpredictors(Clothing.df, lm(Amount ~ poly(Dollar12, Freq12, degree=3)), 0.5), 0.5)
 summary(linreg5)
-anova(multreg.testpredictors(Clothing.df, linreg5, 0.05), linreg5)
-linreg6 <- lm(Amount ~ . - Freq12 - Freq24 - Recency - Dollar24 - Card + I((Dollar12/Freq12)^2) + I(Dollar12 ^2) + I(Freq12 ^ 2) + I(Recency ^ 2) + I(Dollar24 ^ 2) + I(Freq24 ^ 2) + I(ID ^ 2) + I(Card ^ 2), data = Clothing.df)
 ```
+
+The code above tests the full third order model of Dollar12 and Freq12. The function multreg.testpredictors retains only the predictors that have a p-value less than what is inputted - 0.5. Nesting this function essentially does this process twice. Let's check the conditions before we call it a wrap.x
+
+```{r}
+residuals.plot(linreg5)
+hist(linreg5$residuals)
+qqnorm(linreg5$residuals)
+qqline(linreg5$residuals)
 ```
+
+Those residuals are VERY clustered at fitted.value = 0. However, this concern will be addressed in the next section, if the manager does not want to use extraneous functions to predict values.
+
+__Model 1:__
+As such, we have a model with seven predictors: $\hat{Amount} = 46.86 + 1.445 \cdot Dollar12 - 7.151 \cdot Freq12 - 0.5734 \cdot Dollar12 \cdot Freq12 + 0.0000741 \cdot Dollar12^2 \cdot Freq12 + 29.57 \cdot Freq12^2 + 0.0576 \cdot Dollar12 \cdot Freq12^2 - 2.92 \cdot Freq12^3$
+
+## Logarithms
+
+Let's use a similar model from the previous section, but logging Freq12.
+
+```{r}
+detach()
+attach(Clothing.df.logD12F12)
+linreg13 <- multreg.testpredictors(Clothing.df.logD12F12, multreg.testpredictors(Clothing.df.logD12F12, lm(Amount ~ poly(Dollar12, LogFreq12, degree=2)), 0.5), 0.5)
+summary(linreg13)
+```
+
+All predictors are significant at the a = 0.05 level. Also, $R^2_{adj}$ improved to 0.9537. Let's see the residuals.
+
+```{r}
+residuals.plot(linreg13)
+hist(linreg13$residuals)
+qqnorm(linreg13$residuals)
+qqline(linreg13$residuals)
+detach()
+```
+
+This model is severely more complicated, but it does have a higher R^2 value. The histogram of the residuals is unimodal and roughly symmetric. The residuals do drop off below the qqline at low values, but they roughly follow the qqline. Thus, we can use this model as one of our possible models (albeit unlikely).
+
+__Model 2:__
+
+$\hat{Amount} = 21.88 + 0.7694 \cdot Dollar12 - 0.0002335 \cdot Dollar12^2 - 0.8634 \cdot LoqFreq12 - 0.4986 \cdot Dollar12 \cdot LogFreq12 + 65.38 \cdot LogFreq^12$
+
+## Card
+
+Another useful predictor may be Card. First, let's see if there is a significant difference in Amount spent between card-holders and non card-holders.
+
+```{r}
+detach()
+attach(Clothing.df)
+Clothing.df.nc <- Clothing.df[Clothing.df$Card==0,]
+Clothing.df.c <- Clothing.df[Clothing.df$Card==1,]
+boxplot(Clothing.df.nc$Amount, Clothing.df.c$Amount, col = c("red","blue"), names = c("No card", "Card"))
+plot(Clothing.df$Amount, col=ifelse(Card == 0, "red", "blue"))
+```
+
+The boxplot suggests that there is possibly a difference in the distributions.
+
+Let's do a test:
+
+\[H_{0}:\mu_{Card} = \mu_{NoCard}\]\[H_{a}:\mu_{Card} \neq \mu_{NoCard}\]
+```{r}
+detach()
+attach(Clothing.df)
+par(mfrow=c(1,2))
+hist(Clothing.df.c$Amount, main="Card")
+hist(Clothing.df.nc$Amount, main= "Cardless")
+```
+
+Yes, the histograms are not approximately normal, but we proceed with caution.
+The histograms aren't normal, so we must proceed with caution.
+
+```{r}
+t.test(Clothing.df.c$Amount, Clothing.df.nc$Amount)
+```
+
+Our t-value is 2.446, associated with a p-value of 0.02407. This is significant at the alpha = 0.05 leve; thus we reject the null. We have somewhat convincing evidence to suggest that there is indeed a difference between the true mean previous purchasing amount for cardholders and without cardholders. We may be able to confirm this result with multiple regression.
+
+Let's make two separate lines then, one with solely cardholders and one with solely noncardholders.
+
+```{r}
+linreg7 <- lm(Amount ~ (. - Card - ID) + (. - ID):Card, data = Clothing.df)
+summary(linreg7)
+```
+
+Even though there is a difference in the mean spending between cardholders and noncardholders, its high p-value underscores this. Possibly, other predictors already account for some of the new information that Card would have provided. Let's solely use Freq12 and Dollar12 (as they are the only statistically significant predictors)
+
+```{r}
+linreg8 <- lm(Amount~Freq12 + Dollar12 + Card + Dollar12:Card + Freq12:Card)
+summary(linreg8)
+```
+
+This doesn't seem to be working. Let's check up on the residuals
+
+```{r}
+plot(linreg8$residuals~linreg8$fitted.values, xlab="Fitted values", ylab="Residuals")
+```
+
+There seems to be an unusual clustering of points near 0. Logging the predictors can possibly help rectify this problem.
+
+```{r, warning= FALSE, message = TRUE}
+detach()
+attach(Clothing.df.logD12F12)
+linreg9 <- lm(Amount ~ Clothing.df.logD12F12$LogDollar12 + Clothing.df.logD12F12$LogFreq12 + Card + Clothing.df.logD12F12$LogDollar12:Card + Clothing.df.logD12F12$LogFreq12:Card)
+summary(linreg9)
+```
+
+
+The significance tests aren't bad, but the $R^2$ is only okay. Let's check up on the residuals again.
+
+```{r}
+plot(linreg9$residuals ~ linreg9$fitted.values, xlab="Fitted values", ylab="Response")
+```
+
+There's still a pretty curved pattern in the residuals. Maybe throwing in more interaction terms may help.
+
+```{r}
+linreg10 <- lm(Amount~LogFreq12*LogDollar12 * Card)
+summary(linreg10)
+summary(multreg.testpredictors(Clothing.df.logD12F12, linreg10, 0.05))
+summary(multreg.testpredictors(Clothing.df.logD12F12, multreg.testpredictors(Clothing.df.logD12F12, linreg10, 0.05), 0.05))
+```
+
+That did not help. Neither did skimming the nonsignificant predictors. Let's see the residual plot again.
+
+```{r}
+residuals.plot(linreg10)
+```
+
+There's still a curve inherent to the residual plot. Let's try logging Amount then.
+
+```{r}
+linreg11 <- lm(log(Amount)~LogDollar12 * LogFreq12 * Card)
+summary(linreg11)
+```
+
+Let's remove all the predictors with a p-value greater than 0.5
+
+```{r}
+linreg12 <- multreg.testpredictors(Clothing.df.logD12F12, linreg11, 0.5)
+summary(linreg12)
+```
+
+We get a (pretty decent) $R^2_{adj}$ of 0.8966 with all predictors significant at the alpha = 0.05 level. Again, let's look at the residuals and the conditions as a whole.
+
+```{r}
+residuals.plot(linreg12)
+hist(linreg12$residuals)
+qqnorm(linreg12$residuals)
+qqline(linreg12$residuals)
+```
+
+I'm pretty satisfied with this pretty random distribution of residuals about the resid = 0 line. The histogram of residuals might be slightly skewed left, but it's unimodal and very very roughly normalesque. The qqplot reflects this slight limitation, but it shows that a large amount of residuals follow the normal line. Thus, our final model including the troublesome $Card$ Predictor is $\hat{\log{Amount}} = -0.62731 + 1.13360 \cdot \log{Dollar12} - 0.21000 \cdot \log{Dollar12} \cdot \log{Freq12} - 1.50723 \cdot \log{Freq12} \cdot Card + 0.27636 \cdot \log{Dollar12} \cdot \log{Freq12} \cdot Card$
+
+## Average
+
+Maybe the average spent per trip (Dollar12/Freq12) will be useful as a predictor
+
+```{r}
+detach()
+attach(Clothing.df.f12NZ)
+linreg4 <- lm(Amount ~ Freq12 + Dollar12 + I(Dollar12/Freq12))
+summary(linreg4)
+```
+
+That's pretty significant! (p-value of Dollar12/Freq12 is tiny!). Since both the p-values Freq12 and Dollar12 increased, possibly some of Freq12 and Dollar12 can be expressed in Dollar12/Freq12. Anyway, let's give this predictor a name: Avg.
+
+```{r}
+detach()
+attach(Clothing.df.f12NZ)
+Clothing.df.f12NZ$Avg <- Dollar12/Freq12
+detach()
+attach(Clothing.df.f12NZ)
+linreg14 <- lm(Amount~poly(Avg, Dollar12, Freq12, degree = 2))
+summary(linreg14)
+```
+
+All predictors are significant at the alpha = 0.05 level and the R^2 is amazingly at 0.9805. Let's check the residuals.
+
+```{r}
+residuals.plot(linreg14)
+```
+
+The residuals are pretty clumped together. Let's use our trusty log.
+
+```{r}
+detach()
+attach(Clothing.df.f12NZ)
+linreg15 <-  lm(log(Amount) ~ polym(Avg, Dollar12, Freq12, degree = 2))
+summary(linreg15)
+```
+
+No predictor seems extremely significant besides solely LogAvg. Also, our $R^2$ decreased. let's stick to our logless formula for now.
+
+```{r}
+hist(linreg14$residuals)
+qqnorm(linreg14$residuals)
+qqline(linreg14$residuals)
+```
+
+Although the histogram is unimodal but very spiky and our residuals don't follow the qqline, this model can be used to predict Amount.
+
+__Model 4:__
+
+$\hat{Amount} = 278.44 + 189.47 \cdot Avg + 590.8 \cdot Avg^2 + 2845.23 \cdot Dollar12 - 7452.69 \cdot Dollar12 \cdot Avg + 1182.85 \cdot Dollar12^2 - 707.82 \cdot Freq12 - 5761.75 \cdot Dollar12 \cdot Freq12 + 357.79 \cdot Freq12^2$

@@ -1,0 +1,352 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+# Chapter 3 Homework
+
+```{r setup, include=FALSE, echo=FALSE}
+require(knitr)
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+#setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+#knitr::opts_knit$set(root.dir = "C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+```
+
+*Setup*
+```{r}
+linreg.conditionplots<-function(linreg){
+  par(mfrow=c(2,2))
+  plot(linreg$fitted.values + linreg$residuals ~ linreg$fitted.values, ylab="Response", xlab="Fitted values", main = "Response by Fitted Values")
+  hist(linreg$residuals, xlab="Residuals", main="Histogram of residuals")
+  plot(linreg$residuals~linreg$fitted.values, xlab="Fitted values", ylab="Residuals")
+  qqnorm(linreg$residuals)
+  qqline(linreg$residuals)
+}
+```
+
+
+## 1
+
+### a
+
+Using the equation, the model predicts that a student with perfect scores on both the midterm and the project would get a 11.0 + 0.53 * 100 + 1.20 * 30 = 100 on the final
+
+### b
+
+The model predicts that Michael would get a 11.0 + .53 * 87 + 1.2 * 21 = 82.31 on the final. If he got an 80 in reality, his residual would be 80 - 82.31 = -2.31 points. That is, our model overestimates his actual final score by 2.31 points.
+
+## 3
+
+$\beta_2 = -3.7$. That is, for every additional gram of fiber per serving in cereal, the predicted calorie count would increase by about -3.7 calories as the number of sugar per serving is free to vary linearly.
+
+## 4
+
+### a
+
+True. The adjusted R-squared is defined as $1 - \left ( \frac{SSE}{SSTotal} \right ) \left ( \frac{n - 1}{n - k - 1} \right )$. If (and it does) $R_{adj}^2 < R^2$, then $1 - \left ( \frac{SSE}{SSTotal} \right ) \left ( \frac{n - 1}{n - k - 1} \right ) < 1 - \left ( \frac{SSE}{SSTotal} \right )$. Subtracting both sides by 1 and multiplying by -1, we get $\left ( \frac{SSE}{SSTotal} \right ) \left ( \frac{n - 1}{n - k - 1} \right ) > \left ( \frac{SSE}{SSTotal} \right )$. Finally, we divide by $\frac{SSE}{SSTotal}$ (which is always positive), and we get $\left ( \frac{n - 1}{n - k - 1} \right ) > 1$. Multiplying both sides by $n - k - 1$, we get $n - 1 > n - k - 1$. Adding $k + 1 - n$ to both sides, we result with $k > 0$ which is always true in multiple regression.
+
+### b
+
+False. Adding weak predictors can decrease the $R^2_{adj}$.
+
+## 5
+
+### a
+
+I think that BodyFat and Waist are correlated because a larger Waist would suggest more body fat in the belly.
+
+### b
+
+I would correlate Height and BodyFat to be negatively correlated. Taller people use more energy.
+
+### c
+
+Because the correlation is near zero, I would expect the correlation coefficient to also be zero as a change in Height does not correlate to a change in BodyFat
+
+## 6
+
+### a
+
+He should pick dealerships with negative residuals because their cars are cheaper than expected by the model.
+
+### b
+
+$\hat{Price} ~ \beta_0 + \beta_1 \cdot Year + \beta_2 \cdot Mileage$
+
+### c
+
+We might want to add the interaction term because there might be an effect on Mileage by Year. The older the car, the more likely it will have more mileage on it. I expect the coefficient to be negative because older cars with more mileage on them tend to be sold for cheaper.
+
+## 10
+
+### a
+
+$\hat{Salary} = \beta_0 + \beta_1 \cdot Age + \beta_2 \cdot Seniority + \beta_3 \cdot Pub + \beta_4 \cdot IGender + \beta_5 \cdot Age \cdot Seniority + \beta_6 \cdot Age \cdot Pub + \beta_7 \cdot Pub \cdot Seniority + \beta_8 \cdot Age \cdot IGender + \beta_9 \cdot IGender \cdot Seniority + \beta_{10} \cdot IGender \cdot Pub
+
+### b
+
+Age and Seniority will be correlated as the older someone is, the more likely they are going to be associated with the faculty for longer.
+
+### c
+
+Seniority and Pub will be correlated. The longer someone is in the faculty, the more opportunities they have to publish a publication.
+
+### d
+
+If the coefficient for IGender is significantly different from zero, then that would suggest that there is a wage discrepancy between genders. This suggest that there may be sexism in his community.
+
+## 12
+
+### a
+
+```{r}
+MLB2007Standings.df <- read.csv("MLB2007Standings.csv", header=T)
+attach(MLB2007Standings.df)
+MLB2007Standings.lm <- lm(WinPct ~ ERA + Runs)
+summary(MLB2007Standings.lm)
+```
+
+Our prediction equation is $\hat{WinPct} = 0.5103 - 0.0913 \cdot ERA + 0.0005113 \cdot Runs$
+
+### b
+
+```{r}
+print(0.593 - predict(MLB2007Standings.lm, newdata = data.frame(ERA=3.87, Runs=867))[1])
+```
+
+The residual for the Boston Red Sox is about -0.00690281. Our model overestimates the actual winning percentage of the Boston Red Sox by 0.00690281.
+
+### c
+
+Since both predictors are significant at the alpha = 0.05 level, I would not recommend dropping one or the other. Both create a valid model.
+
+```{r}
+MLB2007Standings.lm.1 <- lm(WinPct~ERA)
+MLB2007Standings.lm.2 <- lm(WinPct~Runs)
+summary(MLB2007Standings.lm.1)
+summary(MLB2007Standings.lm.2)
+```
+
+Also, testing the both models, the model suffers without both predictors being present
+
+## 13
+
+```{r}
+detach()
+MathEnrollment.df <- read.csv("MathEnrollment.csv", header=T)
+MathEnrollment.df <- MathEnrollment.df[MathEnrollment.df$AYear != 2003, ]
+attach(MathEnrollment.df)
+MathEnrollment.lm <- lm(Spring ~ AYear + Fall)
+summary(MathEnrollment.lm)
+```
+
+The regression equation is $\hat{Spring} = -873.3901 + 4.5159 \cdot AYear + -0.2021 \cdot Fall$
+
+### b
+
+```{r}
+linreg.conditionplots(MathEnrollment.lm)
+```
+
+The histogram of the residuals seems to be trimodal and nowhere near symmetric. The residual plot shows about equal spread about the resid = 0 line. The residuals very roughly follow the qqnorm line. The histogram problem present in 2.23 was not solved by multiple regression. However, the increasing residuals over time was solved.
+
+## 14
+
+### a
+
+Seen earlier, $R^2 = 0.871$. 87.1% of the variability seen in Spring enrollment can be explained by the variability of either Fall enrollment or the year.
+
+### b
+
+The size of the typical error for this model is 13.37
+
+### c
+
+```{r}
+anova(MathEnrollment.lm)
+summary(MathEnrollment.lm)
+```
+
+Since the F-value of the model is 23.64 on 2 and 7 degrees of freedom. This means that the variance that is explained by the model is 23.64 times greater than the variance that still cannot be explained by the model. The associated p-value is 0.0007704, thus making this model's results statistically significant at all common alpha levels.
+
+### d
+
+Our hypotheses are:
+\[H_{0}:\beta_1 = \beta_2 =0\]\[H_{a}:\beta_i\neq0\]
+
+Using the summary above, the t-values for both predictors (4.566, -4.933) are statistically significant as both p-values (0.00258, 0.00169) are less than 0.05. Thus, the coefficients for both predictors is significantly different from zero.
+
+## 16
+
+### a
+
+$Y = X_{2} + 3$
+
+$Y$ is positively associated with $X_2$.
+
+### b
+
+$Y = -\frac{1}{2}X_1 + 2X_2 + 1$
+
+The coefficient of $X_1$ is not as expected (negative). The coefficient of $X_2$ is as expected (positive).
+
+## 19
+
+```{r}
+detach()
+Speed.df <- read.csv("Speed.csv", header=T)
+attach(Speed.df)
+Speed.lm <- lm(FatalityRate ~ Year)
+plot(FatalityRate~Year)
+abline(Speed.lm)
+summary(Speed.lm)
+```
+
+### a
+
+The slope of the line is -0.04870 %/year
+
+### b
+
+```{r}
+plot(Speed.lm$residuals~Speed.lm$fitted.values)
+abline(0, 0)
+```
+
+There is an obviously curved pattern in the residual plot
+
+### c
+
+Our hypotheses are:
+\[H_{0}:\beta_2 = 0\]\[H_{a}:\beta_2\neq0\]
+
+```{r}
+Speed.lm.1 <- lm(FatalityRate ~ Year + StateControl)
+summary(Speed.lm.1)
+```
+
+Since our p-value of 0.655 is more than alpha = 0.05, we fail to reject the null. We do not have convincing evidence to suggest that there is a significant change in the relationship between fatality rate and year starting in 1995.
+
+### d
+
+Before 1995:
+$\hat{FatalityRate} ~ 85.278326 - 0.041830 \cdot Year$
+
+After 1995:
+$\hat{FatalityRate} ~ 85.2333 - 0.041830 \cdot Year$
+
+## 20
+
+### a
+
+```{r}
+detach()
+BritishUnions.df <- read.csv("BritishUnions.csv", header=T)
+attach(BritishUnions.df)
+BritishUnions.lm <- lm(NetSupport ~ Months)
+plot(NetSupport~Months)
+abline(BritishUnions.lm)
+```
+
+### b
+
+Our hypotheses are:
+\[H_{0}:\beta_1 = 0\]\[H_{a}:\beta_1\neq0\]
+
+```{r}
+summary(BritishUnions.lm)
+linreg.conditionplots(BritishUnions.lm)
+```
+
+There seems to be a pattern in the residual plot. The histogram of the residuals is roughly symmetrical and unimodal possibly bimodal. The residuals roughly follow the qqnorm line. There seems to be a linear pattern as shown in the plot for 20a
+
+We get a t-value of 14.88 which is associated with a p-value of 2.19e-10. This result is statistically significant at every common alpha level. We reject the null; we have convincing evidence to suggest that there is a time effect on the net support.
+
+### c
+
+```{r}
+BritishUnions.lm.1 <- lm(NetSupport ~ Months + Late)
+plot(NetSupport~Months)
+abline(BritishUnions.lm.1$coefficients[1] + BritishUnions.lm.1$coefficients[3], BritishUnions.lm.1$coefficients[2])
+abline(BritishUnions.lm.1$coefficients[1], BritishUnions.lm.1$coefficients[2])
+summary(BritishUnions.lm.1)
+```
+
+$\hat{NetSupport} = -70.04051 + 0.26875 \cdot Months + 39.68893 \cdot ILate$
+
+### d
+
+Our hypotheses are:
+\[H_{0}:\beta_2 = 0\]\[H_{a}:\beta_2\neq0\]
+
+```{r}
+summary(BritishUnions.lm.1)
+```
+
+The small p-value associated with the Late Predictor (0.000951) is statistically significant. Thus, we reject the null. We have convincing evidence to suggest that two parallel lines are needed.
+
+## 21
+
+### a
+
+```{r}
+BritishUnions.lm.3 <- lm(NetSupport ~ Months + Late + Months:Late)
+summary(BritishUnions.lm.3)
+```
+
+The equation is $\hat{NetSupport} = -66.62827 + 0.21037 \cdot Months + 13.11464 \cdot Late + 0.17398 \cdot Late \cdot Months$
+
+### b
+
+Our hypotheses are:
+\[H_{0}:\beta_3 = 0\]\[H_{a}:\beta_3\neq0\]
+
+As seen in the summary earlier, our p-value for the interaction term is 0.1959 which is more than 0.05. Thus, we fail to reject the null. We do not have convincing evidence to suggest that two different non-parallel lines are necessary.
+
+```{r}
+BritishUnions.lm.4 <- lm(NetSupport ~ Months)
+anova(BritishUnions.lm.4, BritishUnions.lm.3)
+```
+
+We get an f-value of 10.13943 which corresponds to a p-value of 0.00222 which is less than alpha = 0.05. Thus, we reject the null. We have convincing evidence that at least one of the terms involving Late is necessary to describe the relationship between Months and NetSupport
+
+## 22
+
+### a
+
+```{r}
+plot(NetSupport~Unemployment)
+abline(lm(NetSupport~Unemployment))
+```
+
+There is no linear pattern (with only one intercept) as evidenced by the scatterplot
+
+### b
+
+Our hypotheses are:
+\[H_{0}:\beta_1 = 0\]\[H_{a}:\beta_1\neq0\]
+
+```{r}
+summary(lm(NetSupport~Unemployment))
+```
+
+Since our p-value of 0.1921 is greater than 0.1, we fail to reject the null hypothesis. We do not have convincing evidence that our $\beta_1$ is significantly different from 0.
+
+### c
+
+Our hypotheses are:
+\[H_{0}:\beta_2 = \beta_1 = 0\]\[H_{a}:\beta_i\neq0\]
+
+```{r}
+BritishUnions.lm.2 <- lm(NetSupport ~ Unemployment + Months)
+summary(BritishUnions.lm.2)
+```
+
+Since our p-values of 0.07 and approximately 0 are less than our alpha = 0.1, we reject the null. We have convincing evidence that $\beta_1 \neq 0$ and $\beta_2 \neq 0$
+
+### d
+
+The coefficient in (b) for Unemployment is positive, but the coefficient for the same predictor in (c) is negative. When Months is factored in as a predictor, the coefficient of Unemployment decreases 8.3377 %/%
+
+

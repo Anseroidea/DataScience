@@ -1,0 +1,175 @@
+---
+title: "Report"
+output: html_notebook
+---
+
+## The Model
+
+Our model to predict a buyer's next purchase is as follows:
+
+$\hat{Amount} = 21.88 + 0.7694 \cdot Dollar12 - 0.0002335 \cdot Dollar12^2 - 0.8634 \cdot LoqFreq12 - 0.4986 \cdot Dollar12 \cdot LogFreq12 + 65.38 \cdot LogFreq^12$
+
+```{r}
+Clothing.df <- read.csv("Clothing.csv", header=T)
+detach()
+attach(Clothing.df)
+Clothing.df <- Clothing.df[Amount > 0 & Amount < 1000000,]
+detach()
+attach(Clothing.df)
+Clothing.df.f12NZ <- Clothing.df[Freq12 > 0,]
+Clothing.df.logD12F12 <- Clothing.df.f12NZ
+detach()
+attach(Clothing.df.f12NZ)
+Clothing.df.logD12F12$LogDollar12 <- log(Dollar12)
+Clothing.df.logD12F12$LogFreq12 <- log(Freq12)
+detach()
+attach(Clothing.df.logD12F12)
+model <- lm(Amount ~ Dollar12 + I(Dollar12^2) + LogFreq12 + I(Dollar12 * LogFreq12) + I(LogFreq12^2))
+summary(model)
+```
+
+This model uses five predictors based on two values: the amount of money the buyer spent in the last 12 months, and the frequency of purchases in the last 12 months. Using these two values, this equation can predict a buyer's next purchase reasonably well, as seen through its $R^2_{adj}$ of 0.9537. In this model, $R^2 = 0.9583$ and $R^2_{adj}^2 = 0.9537$. 95.83% of the variability in account can be explained by the variability in the predictors in our model. A typical residual is about $24.76. Our model is likely not due to chance, as the p-value associated with the f-value is significantly close to zero.
+
+## Coefficients
+
+So, what do all these numbers mean?
+
+They are as follows:
+
+$\hat{\beta_0} = 21.88$
+
+When $Dollar12 = Dollar12^2 = \log{Freq12} = \log{Freq12} \cdot Dollar12 = \log{Freq12}^2 = 0$, our model predicts a next purchase of $21.88.
+
+$\hat{\beta_1} = 0.7694$
+
+Predicted amount increases by about $7.694 for every increase of 10 in Dollar12 as all other variables are free to vary linearly.
+
+$\hat{\beta_2} = 0.0002335$
+
+Predicted amount increases by about $2.335 for every increase of 10000 in Dollar12^2 as all other variables are free to vary linearly.
+
+$\hat{\beta_3} = -86.34$
+
+Predicted amount decreases by about $86.34 for every increase of 1 in the log of Freq12 as all other variables are free to vary linearly.
+
+$\hat{\beta_4} = -0.4986$
+
+Predicted amount decreases by about $4.986 for every increase of 10 in the log of Freq12 times Dollar12 as all other variables are free to vary linearly.
+
+$\hat{\beta_5} = 65.38$
+
+Predicted amount increases by about $65.38 for every increase of 1 in the square of the log of Freq12 as all other variables are free to vary linearly.
+
+## Significance Tests
+
+Our F-value already suggests that our model is not resultant from chance, however individual t-tests (determining the significance of our results) will further confirm this assertion. Firstly, we need to check the conditions of our model.
+
+```{r}
+plot(model$residuals~model$fitted.values, xlab="Fitted values", ylab="Residuals")
+hist(model$residuals, main = "Histogram of residuals")
+qqnorm(model$residuals, main="QQPlot of residuals")
+qqline(model$residuals)
+```
+
+For the residual plot, our residuals vary equally around the residual = 0 line. One possible concern is that our errors tend to cluster around fitted value = 0. This suggests that as our model predicts a buyer to potentially spend more, its prediction will likely vary greater and greater distances from the actual purchase amount.
+
+The histogram is roughly symmetrical and unimodal, suggesting that our residuals approximate a normal distribution.
+
+Our quantile-quantile plot shows that our residuals roughly follow a normal distribution as shown by the histogram. However, there are not enough lesser residuals, so the residuals deviate from an ideal normal distribution. However, this deviation can be overlooked.
+
+Now our conditions have been checked. We may proceed with the tests.
+
+```{r}
+summary(model)
+```
+
+For $\beta_0$,
+
+Our hypotheses are:
+\[H_{0}:\beta_0 =0\]\[H_{a}:\beta_0\neq0\]
+
+As shown earlier, our p-value associated with this coefficient is 0.0336 from a t-value of 2.19, less than alpha = 0.05. Thus, we reject the null and have convincing evidence to suggest that this coefficient significantly differs from zero.
+
+For $\beta_1$,
+
+Our hypotheses are:
+\[H_{0}:\beta_1 =0\]\[H_{a}:\beta_1\neq0\]
+
+Again, our p-value associated with this coefficient is 4.13e-16 (from a t-value of 12.271) which is less than alpha = 0.05. Thus, we reject the null and have convincing evidence to suggest that this coefficient significantly differs from zero.
+
+For $\beta_2$,
+
+Our hypotheses are:
+\[H_{0}:\beta_2 =0\]\[H_{a}:\beta_2\neq0\]
+
+For this as well, our p-value associated with this coefficient is 2.12e-07 from a t-value of 6.090, less than alpha = 0.05. Thus, we reject the null and have convincing evidence to suggest that this coefficient significantly differs from zero.
+
+For $\beta_3$,
+
+Our hypotheses are:
+\[H_{0}:\beta_3 =0\]\[H_{a}:\beta_3\neq0\]
+
+Our p-value associated with this coefficient is 4.18e-5 from a t-value of -4.53, massively less than alpha = 0.05. Thus, we reject the null and have convincing evidence to suggest that this coefficient significantly differs from zero.
+
+For $\beta_4$,
+
+Our hypotheses are:
+\[H_{0}:\beta_4 =0\]\[H_{a}:\beta_4\neq0\]
+
+Repeating, our p-value associated with this coefficient is 1.76e-11 from a t-value of -8.84, greatly smaller than alpha = 0.05. Thus, we reject the null and have convincing evidence to suggest that this coefficient significantly differs from zero.
+
+For $\beta_5$,
+
+Our hypotheses are:
+\[H_{0}:\beta_5 =0\]\[H_{a}:\beta_5\neq0\]
+
+For the final time, our p-value associated with this coefficient is 8.45e-7 from a t-value of 4.312, less than an alpha = 0.05 level. Thus, we reject the null and have convincing evidence to suggest that this coefficient significantly differs from zero.
+
+## Prediction and Confidence Intervals
+
+Now, we can use this model to predict how much customers of certain specifications will spend on their next trip.
+
+```{r}
+detach()
+attach(Clothing.df.logD12F12)
+model.df <- Clothing.df.logD12F12
+model.df$SqDollar12 <- Dollar12^2
+model.df$Dollar12LogFreq12 <- Dollar12 * LogFreq12
+model.df$SqLogFreq12 <- LogFreq12^2
+detach()
+attach(model.df)
+model.1 <- lm(Amount ~ Dollar12 + LogFreq12 + SqDollar12 + Dollar12LogFreq12 + SqLogFreq12)
+```
+
+Let's predict how much a person that has spent 150 dollars in the last 12 months and traveled to the store 5 times will spend.
+
+```{r}
+detach()
+predict(model.1, newdata = data.frame(Dollar12 = 150, LogFreq12 = log(5), SqDollar12 = 150^2, Dollar12LogFreq12 = 150 * log(5), SqLogFreq12 = log(5)^2), int = "prediction")
+```
+We can say that with 95% confidence, a customer with these specifications will spend between ___- and ___
+
+This can also be applied to a customer who has spent 400 dollars in the last 12 months and traveled to the store 9 times in this time period.
+
+```{r}
+detach()
+predict(model.1, newdata = data.frame(Dollar12 = 400, LogFreq12 = log(9), SqDollar12 = 400^2, Dollar12LogFreq12 = 400 * log(9), SqLogFreq12 = log(9)^2), int = "prediction")
+```
+
+We can say that with 95% confidence, a customer with these specifications will spend between ___ and ____
+
+For the first customer, say that the values given are actually their mean money spent in a 12 month period and 9 times is their mean frequency to a store in the same amount of time.
+
+```{r}
+predict(model.1, newdata = data.frame(Dollar12 = 150, LogFreq12 = log(5), SqDollar12 = 150^2, Dollar12LogFreq12 = 150 * log(5), SqLogFreq12 = log(5)^2), int = "confidence")
+```
+
+Our model would then predict that the mean next purchase spent with 95% confidence would be ___ and ___
+
+This applies to the second customer as well.
+
+```{r}
+predict(model.1, newdata = data.frame(Dollar12 = 400, LogFreq12 = log(9), SqDollar12 = 400^2, Dollar12LogFreq12 = 400 * log(9), SqLogFreq12 = log(9)^2), int = "confidence")
+```
+
+In conclusion, this model can be used to predict any customer's potential next spending amount given their total money spent in the past 12 months and the amount of trips they made to the store in the last 12 months. Although it may seem complicated, with the help of computers, the calculations involved are trivial.
