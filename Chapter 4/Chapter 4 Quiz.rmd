@@ -1,0 +1,65 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## 1
+
+```{r}
+setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+```
+
+### a
+
+```{r}
+HighPeaks.df <- read.csv("HighPeaks.csv", header=T)
+attach(HighPeaks.df)
+HighPeaks.lm <- lm(Time ~ Elevation + Length)
+summary(HighPeaks.lm)
+HighPeaks.ellm <- lm(Time ~ Elevation)
+HighPeaks.lelm <- lm(Time ~ Length)
+summary(HighPeaks.ellm)
+summary(HighPeaks.lelm)
+```
+
+
+### b
+
+```{r}
+library(car)
+avPlots(HighPeaks.lm)
+```
+
+## 3
+
+```{r}
+detach()
+training.df <- read.csv("HighPeaksTraining.B.csv", header=T)
+holdout.df <- read.csv("HighPeaksHoldout.B.csv", header=T)
+attach(training.df)
+training.lm <- lm(GPA ~ HSGPA + HU + White)
+summary(training.lm)
+```
+
+### b
+
+```{r}
+predictions <- predict(training.lm, holdout.df)
+residuals <- holdout.df$GPA - predictions
+```
+
+#### i
+
+```{r}
+print(mean(residuals))
+print(sd(residuals))
+print(mean(training.lm$residuals))
+```
+
+```{r}
+correl <- cor(predictions, holdout.df$GPA)
+print(correl)
+print(correl^2)
+print(.341 - correl^2)
+```

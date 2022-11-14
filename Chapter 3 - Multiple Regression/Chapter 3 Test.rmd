@@ -24,8 +24,9 @@ detach()
 attach(Clothing.df)
 ```
 
+*Condition plots for linear regression*
 ```{r}
-multreg.conditionplots <- function(linreg){
+linreg.conditionplots <- function(linreg){
   plot(linreg$fitted.values + linreg$residuals~linreg$fitted.values, ylab="Response", xlab="Fitted values", main = "Response by Fitted values") #filler plot to appease par's 2x2
   hist(linreg$residuals, xlab="Residuals", main="Histogram of residuals") #histogram of residuals
   plot(linreg$residuals~linreg$fitted.values, xlab="Fitted values", ylab="Residuals") #resid plot of residuals vs fitted values
@@ -52,7 +53,7 @@ linreg2 <- lm(Amount ~ Freq12 + Dollar12)
 summary(linreg2)
 ```
 
-$R_{adj}^2$ actually improved a small bit, meaning that the other predictors were probably not relevant. However, we can try better. Let's use a full second order model with Freq12 and Dollar12
+$R_{adj}^2$ decreased a bit, but the fact that's its relatively the same means that the other predictors were probably not relevant. However, we can try better. Let's use a full second order model with Freq12 and Dollar12
 
 ```{r}
 linreg3 <- lm(Amount~Freq12*Dollar12)
@@ -62,7 +63,8 @@ summary(linreg3)
 Although $R_{adj}^2$ increased by a minuscule amount, the Freq12:Dollar12 predictor does not seem to be statistically significant (P > 0.05). Another useful predictor may be Card. First, let's see if there is a significant difference in Amount spent between card-holders and non card-holders.
 
 ```{r}
-hist(Clothing.df[Clothing.df$Card==0,]$Amount, Clothing.df[Clothing.df$Card==1,]$Amount, col = c("red","blue"))
+boxplot(Clothing.df[Clothing.df$Card==0,]$Amount, Clothing.df[Clothing.df$Card==1,]$Amount, col = c("red","blue"), names = c("Cardless", "Cardful"))
+t.test(Clothing.df[Clothing.df$Card==0,]$Amount, Clothing.df[Clothing.df$Card==1,]$Amount)
 ```
 
 Maybe the average spent per trip (Dollar12/Freq12) will be useful as a predictor
@@ -87,6 +89,7 @@ summary(linreg5)
 
 The output above shows all the interaction terms that are possible in a full second order model (excluding when a predictor is multiplied by itself). Let's solely pick the predictors significant at a = 0.001.
 
+**
 ```{r}
 linregtest <- lm(Amount ~ Dollar12 + Freq12)
 multreg.testpredictors <- function(df, linreg, alpha) {
