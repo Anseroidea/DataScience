@@ -1,0 +1,25 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+The code chunk appears:
+```{r}
+#setwd("C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+#knitr::opts_knit$set(root.dir = "C:/Users/slhscs402/Documents/IdeaProjects/DataScience/data")
+Candy.df <- read.csv("CandyRaw.csv", header = T)
+Candy.df$Cardboard <- ifelse(Candy.df$Box == "plastic", 0, 1)
+Cardboard.df <- Candy.df[Candy.df$Cardboard == 1, c(1, 2, 4)]
+Plastic.df <- Candy.df[Candy.df$Cardboard == 0, c(1, 2, 4)]
+Cardboard.df$LogLength <- log(Cardboard.df$Length)
+Cardboard.df$LogWidth <- log(Cardboard.df$Length)
+library(leaps)
+out<-summary(regsubsets(Candy~.,nbest=2,data=Cardboard.df)) #named the summary so that we can call parts of it easily
+Subsets<-out$which #tells us which subsets are used (T/F)
+R2<-round(100*out$rsq,1) #storing a list of all R2 percentages
+R2adj<-round(100*out$adjr2,1) #storing a list of all R2adj percentages
+Cp<-round(out$cp,1) #storing a list of all Mallows' Cp values
+cbind(Subsets,R2,R2adj,Cp) #output a dataframe showing all the info we just collected
+```
+
