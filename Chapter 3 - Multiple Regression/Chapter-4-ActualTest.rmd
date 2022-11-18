@@ -1,0 +1,103 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+Candy.df <- read.csv("CandyRaw.csv", header = T)
+Candy.df$LogLength <- log(Candy.df$Length)
+Candy.df$LogWidth <- log(Candy.df$Width)
+Candy.df$HandSize <- Candy.df$Length * Candy.df$Width
+Candy.df$Cardboard <- ifelse(Candy.df$Box == "cardboard", 1, 0)
+library(leaps)
+out<-summary(regsubsets(Candy~(. + I(LogWidth * LogLength)) * Cardboard,nbest=2,data=Candy.df[, c(1, 2, 4, 5, 6, 7, 8)])) #named the summary so that we can call parts of it easily
+Subsets<-out$which #tells us which subsets are used (T/F)
+R2<-round(100*out$rsq,1) #storing a list of all R2 percentages
+R2adj<-round(100*out$adjr2,1) #storing a list of all R2adj percentages
+Cp<-round(out$cp,1) #storing a list of all Mallows' Cp values
+cbind(Subsets,R2,R2adj,Cp) #output a dataframe showing all the info we just collected
+model.lm <- lm(Candy ~ Length + Cardboard + Length:Cardboard + LogLength:Cardboard, data = Candy.df) #let's take the predictors from the best model with 4 predictors from best subsets. Its Cp is about 5, and the associated p-value is relatively low. Its R^2 adj and R^2 is decently high
+summary(model.lm)
+```
+
+$\hat{Candy} = -27.871 Length - 1574 \cdot Cardboard - 48.245 \cdot Length \cdot ICardboard + 846.984 \cdot LogLength \cdot ICardboard$
+
+```{r}
+multreg.conditionplots <- function(linreg){
+  par(mfrow= c(2,2))
+  plot(linreg$fitted.values + linreg$residuals~linreg$fitted.values, ylab="Response", xlab="Fitted values", main = "Response by Fitted values") #filler plot to appease par's 2x2
+  hist(linreg$residuals, xlab="Residuals", main="Histogram of residuals") #histogram of residuals
+  plot(linreg$residuals~linreg$fitted.values, xlab="Fitted values", ylab="Residuals") #resid plot of residuals vs fitted values
+  qqnorm(linreg$residuals) #the qqnorm plot of the residuals
+  qqline(linreg$residuals)
+}
+multreg.conditionplots(model.lm)
+```
+
+```{r}
+attach(Candy.df)
+originalF <- data.frame(summary(model.lm)$fstatistic)[1,1] # get orig F-stat
+print(originalF)
+N <- 5000 # get 5000 perms
+permFstat <- as.numeric(0) # init
+for (i in 1:N) {
+  dummy.lm <- lm(sample(Candy) ~ Length + Cardboard + Length:Cardboard + LogLength:Cardboard, data=Candy.df) # randomize Candy, match with predictors
+  permFstat[i] <-data.frame(summary(dummy.lm)$fstatistic)[1,1] # store fstat of perm
+}
+hist(permFstat, main="Randomized F-statistic for a randomization test on our model", xlab="ANOVA F-statistic for 5000 samples")
+p.randomization <- sum(permFstat > originalF)/N
+detach()
+```
+
+Our p-value is `r p.randomization`
+
+```{r}
+model.ls <- ls.diag(model.lm)
+model.df <- Candy.df
+model.df$studResid <- model.ls$stud.res
+model.df$Leverage <- model.ls$hat
+model.df$Cooks <- model.ls$cooks
+print(model.df[model.df$studResid > 2,])
+print(model.df[model.df$Leverage > 6 * 2 / nrow(model.df),])
+print(model.df[model.df$Cooks > 0.5,])
+```
+
+```{r}
+attach(Candy.df)
+N <- 5000
+summary(model.lm)
+origboxcoeff <- model.lm$coefficients[3] # store original box (ICardboard) coef
+origlencoeff <- model.lm$coefficients[2] # store original len coef
+origsdErr <- summary(model.lm)$sigma  # store original sd of resids
+boxcoeff <- as.numeric(0)
+boxcoeffsd <- as.numeric(0)
+lencoeff <- as.numeric(0)
+lencoeffsd <- as.numeric(0)
+sdErr <- as.numeric(0)
+for (i in 1:N){
+  Candy.dummy<-Candy.df[sample(1:nrow(Candy.df),nrow(Candy.df),replace=TRUE),]
+  #creating a linear model
+  dummy.lm <- lm(Candy ~ Length + Cardboard + Length:Cardboard + LogLength:Cardboard, data = Candy.dummy) # make model
+  # store coefs and resid for each permutation
+  boxcoeff[i] <- dummy.lm$coefficients[3]
+  boxcoeffsd[i] <- summary(dummy.lm)$coefficients[3, 2]
+  lencoeff[i] <- dummy.lm$coefficients[2]
+  lencoeffsd[i] <- summary(dummy.lm)$coefficients[2, 2]
+  sdErr[i] <- summary(dummy.lm)$sigma
+}
+hist(boxcoeff, main="Bootstrap for Box coefficient", xlab="Effect on the intercept by Box")
+hist(lencoeff, main="Bootstrap for Length coefficient", xlab="Coefficient on Length predictor")
+hist(sdErr, main="Bootstrap for standard error of regression", xlab="Standard error")
+detach()
+TStar.box <- (boxcoeff - origboxcoeff)/boxcoeffsd
+TStar.len <- (lencoeff - origlencoeff)/lencoeffsd
+TStar.sdErr <- (sdErr - origsdErr)/sd(sdErr)
+paste0("Box Confint: (", origboxcoeff - quantile(TStar.box, 0.975) * sd(boxcoeff), ", ", origboxcoeff - quantile(TStar.box, 0.025) * sd(boxcoeff), ")")
+paste0("Len Confint: (", origlencoeff - quantile(TStar.len, 0.975) * sd(lencoeff), ", ", origlencoeff - quantile(TStar.len, 0.025) * sd(lencoeff), ")")
+paste0("Standard Error Confint: (", origsdErr - quantile(TStar.sdErr, 0.975) * sd(sdErr), ", ", origsdErr - quantile(TStar.sdErr, 0.025) * sd(sdErr), ")")
+```
+
+
+

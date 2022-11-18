@@ -1,0 +1,402 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## 2
+
+### a
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+HighPeaks.df <- read.csv("HighPeaks.csv", header=T)
+attach(HighPeaks.df)
+plot(Time ~ Elevation)
+```
+
+There does not appear to be an association between Elevation and Time. Elevation does not seem to be a helpful predictor.
+
+### b
+
+```{r}
+HighPeaks.lm <- lm(Time ~ Elevation + Length)
+summary(HighPeaks.lm)
+```
+
+Elevation has a p-value of 0.01 which is relatively small. Thus, we can conclude that Elevation is somewhat important to the model.
+
+```{r}
+HighPeaks.ellm <- lm(Time ~ Elevation)
+HighPeaks.lelm <- lm(Time ~ Length)
+summary(HighPeaks.ellm)
+summary(HighPeaks.lelm)
+```
+
+This model is significantly better than just Elevation ($R^2$ of -0.02); however, it is only slightly better than just Length ($R^2$ of 0.737)
+
+### c
+
+```{r}
+library(car)
+avPlots(HighPeaks.lm)
+
+```
+
+
+The first plot demonstrates adding Elevation to a model that contains just Length. Because the data has a moderate negative correlation, there is information in Elevation that is useful for predicting Time after account for trip Length.
+
+## 3
+
+### a
+
+```{r}
+MLB2007Standings.df <- read.csv("MLB2007Standings.csv", header = T)
+detach()
+attach(MLB2007Standings.df)
+head(MLB2007Standings.df[ , colnames(MLB2007Standings.df) != "WinPct"])
+cor(MLB2007Standings.df[ , !(colnames(MLB2007Standings.df) %in% c("WinPct", "Wins", "Losses")) & sapply(MLB2007Standings.df, is.numeric)], WinPct)
+MLB2007Standings.forwardLm <- lm(WinPct ~ ERA + Runs + RBI + WHIP)
+summary(MLB2007Standings.forwardLm)
+```
+
+Our predictors are ERA, Runs, RBI, and WHIP. We get a $R^2$ of 0.8222.
+
+### b
+
+```{r}
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits - OBP, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits - OBP - ERA, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits - OBP - ERA - BattingAvg, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits - OBP - ERA - BattingAvg - HitsAllowed, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits - OBP - ERA - BattingAvg - HitsAllowed - Walks, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits - OBP - ERA - BattingAvg - HitsAllowed - Walks - SLG, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits - OBP - ERA - BattingAvg - HitsAllowed - Walks - SLG - Doubles, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+MLB2007Standings.backwardsLm <- lm(WinPct ~ . - Wins - Losses - League - Team - StrikeOuts - SB - RBI - Hits - OBP - ERA - BattingAvg - HitsAllowed - Walks - SLG - Doubles - Triples, data = MLB2007Standings.df)
+summary(MLB2007Standings.backwardsLm)
+```
+
+Our predictors as Runs, HR, Saves, and WHIP. Our $R^2$ is 0.8961.
+
+
+### c
+
+```{r}
+best_subsets <- function(data, response) {
+  library(leaps)
+  out=summary(regsubsets(response~.,nbest=2,data=data)) #named the summary so that we can call parts of it easily
+  Subsets<-out$which #tells us which subsets are used (T/F)
+  R2<-round(100*out$rsq,1) #storing a list of all R2 percentages
+  R2adj<-round(100*out$adjr2,1) #storing a list of all R2adj percentages
+  Cp<-round(out$cp,1) #storing a list of all Mallows' Cp values
+  cbind(Subsets,R2,R2adj,Cp) #output a dataframe showing all the info we just collected
+}
+best_subsets(MLB2007Standings.df[, !(colnames(MLB2007Standings.df) %in% c("WinPct", "Wins", "Losses")) & sapply(MLB2007Standings.df, is.numeric)], WinPct)
+```
+
+Using best subsets, our predictors are BattingAvg, Runs, Saves, and WHIP. The $R^2$ is 91.2
+
+### d
+
+```{r}
+#don't know why the following function does not work
+cp <- function(full, model, m, n){
+    return(sum(model$residuals^2)/mean(full$residuals^2) + 2 * (m + 1) - n)
+}
+library(olsrr)
+MLB2007Standings.fulllm <- lm(WinPct ~ . - Team - League - Wins - Losses, data = MLB2007Standings.df)
+ols_mallows_cp(lm(WinPct ~ BattingAvg + Saves + Runs + WHIP), MLB2007Standings.fulllm)
+ols_mallows_cp(MLB2007Standings.forwardLm, MLB2007Standings.fulllm)
+ols_mallows_cp(MLB2007Standings.backwardsLm, MLB2007Standings.fulllm)
+```
+
+The $C_p$ for the forward model is 23.61578
+The $C_p$ for the backward model is 5.472589
+The $C_p$ for the best subsets model is 1.705507
+
+### e
+
+I would prefer the best subsets model because it has the highest $R^2$ and $R_{adj}^2$ as well as the lowest $C_p$
+
+## 4
+
+```{r}
+detach()
+Fertility.df <- read.csv("Fertility.csv", header=T)
+attach(Fertility.df)
+cor(Fertility.df[ , !(colnames(Fertility.df) %in% c("LowAFC", "MeanAFC")) & sapply(Fertility.df, is.numeric)], MeanAFC)
+```
+
+### a
+
+MaxDailyGn has the strongest correlation with MeanAFC. E2 has the weakest correlation with MeanAFC.
+
+### b
+
+```{r}
+summary(lm(MeanAFC ~ E2))
+```
+
+Because the p-value of 0.02011 is less than alpha = 0.05, our model is effective in predicting MeanAFC.
+
+### c
+
+```{r}
+best_subsets(Fertility.df[ , !(colnames(Fertility.df) %in% c("LowAFC", "MeanAFC")) & sapply(Fertility.df, is.numeric)], MeanAFC)
+
+```
+
+```{r}
+Fertility.lm <- lm(MeanAFC ~ E2 + MaxDailyGn + Oocytes)
+summary(Fertility.lm)
+```
+
+Our predictors are E2, MaxDailyGn, and Oocytes. The $R^2$ is 0.2688.
+
+### d
+
+The p-value of the model is less than 0.05. The individual p-values for each predictor is significant at the alpha = 0.05 level.
+
+```{r}
+plot(Fertility.lm$residuals~Fertility.lm$fitted.values)
+qqnorm(Fertility.lm$residuals)
+qqline(Fertility.lm$residuals)
+```
+
+There isn't roughly equal spread about the resid = 0 line. Also, according to the qqnorm plot, the residuals clearly aren't normal. Coupled with the low R^2, I am not satisfied with the model.
+
+## 5
+
+### a
+
+```{r}
+cor(Fertility.df[ , !(colnames(Fertility.df) %in% c("LowAFC", "MeanAFC")) & sapply(Fertility.df, is.numeric)], LowAFC)
+```
+
+MaxDailyGn has the strongest correlation with LowAFC. E2 has the weakest correlation with LowAFC.
+
+### b
+
+```{r}
+summary(lm(LowAFC ~ E2))
+```
+
+Because the p-value of 0.02274 is less than alpha = 0.05, our model is effective in predicting MeanAFC.
+
+### c
+
+```{r}
+best_subsets(Fertility.df[ , !(colnames(Fertility.df) %in% c("LowAFC", "MeanAFC")) & sapply(Fertility.df, is.numeric)], LowAFC)
+
+```
+
+```{r}
+Fertility.lowlm <- lm(LowAFC ~ E2 + MaxDailyGn + Oocytes)
+summary(Fertility.lowlm)
+```
+
+Our predictors are E2, MaxDailyGn, and Oocytes. The $R^2$ is 0.2642.
+
+### d
+
+The p-value of the model is less than 0.05. The individual p-values for each predictor is significant at the alpha = 0.05 level.
+
+```{r}
+plot(Fertility.lowlm$residuals~Fertility.lowlm$fitted.values)
+qqnorm(Fertility.lowlm$residuals)
+qqline(Fertility.lowlm$residuals)
+```
+
+There isn't roughly equal spread about the resid = 0 line. Also, according to the qqnorm plot, the residuals clearly aren't normal. Coupled with the low R^2, I am not satisfied with the model.
+Both models suffer the same fate.
+
+## 6
+
+### a
+
+In each step, we add a predictor not already included in the model with the strongest correlation to the model.
+
+```{r}
+cor(Fertility.df[ , !(colnames(Fertility.df) %in% c("Embryos")) & sapply(Fertility.df, is.numeric)], Embryos)
+```
+
+Oocytes has the highest correlation, so:
+
+```{r}
+Fertility.olm <- lm(Embryos ~ Oocytes)
+summary(Fertility.olm)
+```
+
+The p-value is small, so we add another predictor. MaxE2 has the next strongest correlation.
+
+```{r}
+Fertility.olm <- lm(Embryos ~ Oocytes + MaxE2)
+summary(Fertility.olm)
+```
+
+The p-value is still small. MeanAFC has the next strongest correlation.
+
+```{r}
+Fertility.olm <- lm(Embryos ~ Oocytes + MaxE2 + MeanAFC)
+summary(Fertility.olm)
+```
+
+The p-value is still small. LowAFC has the next strongest correlation.
+
+Let's see if adding every variable would deter the p-value of the model.
+
+```{r}
+Fertility.olm <- lm(Embryos ~ ., data = Fertility.df)
+summary(Fertility.olm)
+```
+
+The p-value is still small, so this is our final model.
+
+### b
+
+```{r}
+plot(Fertility.olm$residuals ~ Fertility.olm$fitted.values)
+```
+
+There seems to be clustering in low fitted values and more variation as fitted values increases. Thus, I'm not satisfied with the model.
+
+
+### c
+
+```{r}
+cor(Fertility.df[ , !(colnames(Fertility.df) %in% c("Embryos", "Oocytes")) & sapply(Fertility.df, is.numeric)], Embryos)
+```
+
+MaxE2 has the highest correlation, so:
+
+```{r}
+Fertility.olm <- lm(Embryos ~ MaxE2)
+summary(Fertility.olm)
+```
+
+The p-value is still small. MeanAFC has the next strongest correlation.
+
+```{r}
+Fertility.olm <- lm(Embryos ~ MaxE2 + MeanAFC)
+summary(Fertility.olm)
+```
+
+The p-value is still small. LowAFC has the next strongest correlation.
+
+Let's see if adding every variable would deter the p-value of the model.
+
+```{r}
+Fertility.olm <- lm(Embryos ~ . - Oocytes, data = Fertility.df)
+summary(Fertility.olm)
+```
+
+The p-value is still small, so this is our final model.
+
+## 7
+
+```{r}
+detach()
+BaseballTimes.df <- read.csv("BaseballTimes.csv", header=T)
+attach(BaseballTimes.df)
+best_subsets(BaseballTimes.df[ , !(colnames(BaseballTimes.df) %in% c("Time")) & sapply(BaseballTimes.df, is.numeric)], Time)
+```
+
+### a
+
+```{r}
+summary(lm(Time ~ Margin + Pitchers + Attendance + Runs))
+```
+
+$\hat{Time} = 88.01 - 3.728 * Margin + 8.732 * Pitchers + 0.0007269 * Attendance + 1.5613 * Runs$
+
+### b
+
+```{r}
+summary(lm(Time ~ Margin + Pitchers + Attendance))
+```
+
+$\hat{Time} = 90.36 - 2.869 * Margins + 10.60 * Pitchers + 0.0005531 * Attendance$
+
+### c
+
+```{r}
+summary(lm(Time ~ Pitchers))
+```
+
+$\hat{Time} = 94.843 + 10.710 * Pitchers$
+
+### d
+
+I would pick the model from b. Its $C_p$ is below 4 and it has the highest $R_{adj}^2$ out of all the models.
+
+## 8
+
+### a/b
+
+```{r}
+detach()
+FirstYearGPA.df <- read.csv("../data/FirstYearGPA.csv", header = T)
+id <- rownames(FirstYearGPA.df)
+FirstYearGPATraining.df <- FirstYearGPA.df[strtoi(id) <= 150,]
+FirstYearGPAHoldout.df <- FirstYearGPA.df[strtoi(id) > 150,]
+attach(FirstYearGPATraining.df)
+FirstYearGPATraining.lm <- lm(GPA ~ HSGPA + HU + White)
+summary(FirstYearGPATraining.lm)
+```
+
+Our model equation is $\hat{GPA} = 1.147478 + 0.466053 * HSGPA + 0.015328 * HU + 0.199174 * White$
+
+The SD of the error is 0.3773. the $R^2$ is 0.2842.
+
+
+### c
+
+```{r}
+holdoutPredictions <- predict(FirstYearGPATraining.lm,FirstYearGPAHoldout.df)
+resids <- FirstYearGPAHoldout.df$GPA - holdoutPredictions
+```
+
+### d
+
+```{r}
+print(mean(resids))
+print(sd(resids))
+```
+
+The mean of the residuals is -0.05947226. The SD is 0.4065554. The mean is reasonably close to zero and the SD of the residuals is reasonably close to that of the model (0.3775)
+
+### e
+
+```{r}
+holdoutCor <- cor(FirstYearGPAHoldout.df$GPA, holdoutPredictions)
+```
+
+The correlation is 0.5960115.
+
+```{r}
+holdoutRSq <- holdoutCor ^ 2
+print(holdoutRSq)
+print(0.2842 - holdoutRSq)
+```
+
+The R^2 for the holdout data is 0.3552297
+
+The R^2 actually increased?. Our shrinkage is -0.07102966
+

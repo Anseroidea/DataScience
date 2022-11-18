@@ -1,0 +1,410 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## 9
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+Cereal.df <- read.csv("Cereal.csv", header = T)
+attach(Cereal.df)
+Cereal.lm <- lm(Calories ~ Sugar + Fiber)
+Cereal.ls <- ls.diag(Cereal.lm)
+Cereal.df$stdResid <- Cereal.ls$std.res
+Cereal.df$studResid <- Cereal.ls$stud.res
+Cereal.df$Leverage <- Cereal.ls$hat
+Cereal.df$Cooks <- Cereal.ls$cooks
+detach(Cereal.df)
+attach(Cereal.df)
+```
+
+### a
+
+```{r}
+print((Cereal.df[abs(stdResid) > 2,]))
+```
+
+Using standardized residuals, only Kenmei Rice Bran and Mueslix Crispy Blend are really unusual.
+
+### b
+
+```{r}
+print((Cereal.df[abs(studResid) > 2,]))
+```
+
+Using studentized residuals, Just Right as well as Kenmei Rice Bran and Mueslix Crispy Blend are really unusual
+
+### c
+
+```{r}
+print((Cereal.df[Leverage > 6/nrow(Cereal.df),]))
+```
+
+All the cereals listed above are slightly unusual as their leverage is above 0.16666 (3 coefficients) * 2 / 36 observations.
+
+### d
+
+```{r}
+print(Cereal.df[Cooks > 0.4, ])
+```
+
+Solely Mueslix Crispy Blend has a high Cook's Distance.
+
+## 10
+
+```{r}
+detach()
+ReligionGDP.df <- read.csv("ReligionGDP.csv", header = T)
+ReligionGDP.df$logGDP <- log(ReligionGDP.df$GDP)/log(10)
+attach(ReligionGDP.df)
+```
+
+### a
+
+```{r}
+plot(logGDP ~ Religiosity)
+```
+
+### b
+
+```{r}
+ReligionGDP.lm <- lm(logGDP ~ Religiosity)
+summary(ReligionGDP.lm)
+```
+
+53.88% of the variability in logGDP can be explained by the variability in Religiosity.
+
+### c
+
+In a country with 0 Religiosity, our model predicts the log of their GDP to be 4.77553
+
+### d
+
+```{r}
+ReligionGDP.ls <- ls.diag(ReligionGDP.lm)
+ReligionGDP.df$studResid <- ReligionGDP.ls$stud.res
+plot(ReligionGDP.df$studResid ~ ReligionGDP.lm$fitted.values)
+print(ReligionGDP.df[ReligionGDP.df$Country == "Kuwait", ])
+```
+
+The magnitude of the studentized residual is 3.986899.
+
+### e
+```{r}
+ReligionGDP.lm1 <- lm(logGDP ~ Religiosity + Africa + EastEurope + MiddleEast + Asia + WestEurope + Africa:Religiosity + EastEurope:Religiosity + MiddleEast:Religiosity + Asia:Religiosity + WestEurope:Religiosity)
+summary(ReligionGDP.lm1)
+```
+
+74.76% of the variability in logGDP can be explained by the variability in the model.
+
+### f
+
+In a country in the Americas, each additional increase in Religiosity by 1 is predicted by our model to decrease the log of its GDP by -0.45228.
+
+### g
+
+No, the original model had a p-value of 1.432E-8 compared to the new model's p-value of 8.125E-7. Thus, the inclusion of the regions actually decreased the effectiveness of our model.
+
+### h
+
+```{r}
+plot(ls.diag(ReligionGDP.lm1)$stud.res ~ ReligionGDP.lm1$fitted.values)
+ReligionGDP.df$studResid1 <- ls.diag(ReligionGDP.lm1)$stud.res
+print(ReligionGDP.df[ReligionGDP.df$Country == "Kuwait",])
+```
+
+Kuwait had a studentized residual of 2.889181.
+
+## 11
+
+```{r}
+detach()
+HighPeaks.df <- read.csv("HighPeaks.csv", header=T)
+attach(HighPeaks.df)
+```
+
+```{r}
+#make sure to run install.packages("leaps") before using this library
+#we need the library for the regsubsets() function,
+#this function produces an exhaustive search for the best subsets of the full model,
+#you can make it go forwards or backwards
+library(leaps)
+out=summary(regsubsets(Time~Elevation + Length + Difficulty + Ascent,nbest=2,data=HighPeaks.df)) #named the summary so that we can call parts of it easily
+Subsets<-out$which #tells us which subsets are used (T/F)
+R2<-round(100*out$rsq,1) #storing a list of all R2 percentages
+R2adj<-round(100*out$adjr2,1) #storing a list of all R2adj percentages
+Cp<-round(out$cp,1) #storing a list of all Mallows' Cp values
+cbind(Subsets,R2,R2adj,Cp) #output a dataframe showing all the info we just collected
+HighPeaks.lm <- lm(Time ~ Elevation + Length + Difficulty + Ascent, data= HighPeaks.df)
+summary(HighPeaks.lm)
+```
+
+### a
+
+The best model is $\hat{Time} = 5.956784 - 0.0016703 * Elevation + 0.4440084 * Length + 0.8654527 * Difficulty + 0.0006011 * Ascent)$
+This is because it had the highest $R_{adj}^2$ and only good $C_p of 5.0$
+
+### b
+
+```{r}
+hist(HighPeaks.lm$residuals)
+plot(HighPeaks.lm$residuals ~ HighPeaks.lm$fitted.values)
+qqnorm(HighPeaks.lm$residuals)
+qqline(HighPeaks.lm$residuals)
+```
+
+The histogram is unimodal and roughyl symmetrical. There is no pattern in the residual plot. The residuals roughly follow the normal line.
+
+### c
+
+```{r}
+HighPeaks.ls <- ls.diag(HighPeaks.lm)
+HighPeaks.df$studResid <- HighPeaks.ls$stud.res
+print(HighPeaks.df[abs(HighPeaks.df$studResid) > 2,])
+```
+
+Seward Mtn, Mt Donaldson, and Mt Emmons all have studentized residuals with a magnitude greater than 2.
+
+### d
+
+```{r}
+HighPeaks.df$Leverage <- HighPeaks.ls$hat
+HighPeaks.df$Cooks <- HighPeaks.ls$cooks
+print(HighPeaks.df[HighPeaks.df$Leverage > 10/nrow(HighPeaks.df) | HighPeaks.df$Cooks > 0.4,])
+```
+
+No mountain was unusual for Cooks, but four mountains were for leverage ( > 2 * (4 predictors + 1)/46)
+
+## 12
+
+The intercept represents the mean birth weight of a white baby in North Carolina (117.87 oz). The coefficient on the Black predictor represents the deviation from the mean birth weight of an NC white baby that the mean black NC baby has with its own birth weight (104.56 oz). The same can be said for the Hispanic predictor (118.52 oz) and the Other predictor (117.14 oz).
+
+## 13
+
+### a
+
+The t-test for the Black predictor has a p-value of about 0 which is significant at all common significance levels. Thus, the black predictor provides more inofrmation in predicting mean baby weight vs just using Other. The t-test for the Hispanic and Other predictor is not significant at any major significance level. Thus, we do not have convincing evidence that these predictors provide any new information regarding the mean baby birth weights. The t-test for the intercept corresponds to a p-value of about 0, thus we have convincing evidence to suggest that the model is better than just randomly predicting white baby weights.
+
+### b
+
+1.9% of the variability in baby birth weights in NC can be explained by the variability in the model.
+
+### c
+
+The F-statistic of 9.53 signifies that the variability accounted for by the model is 9.53 times the variability not accounted for by the model.
+
+## 14
+
+```{r}
+detach()
+Blood.df <- read.csv("Blood1.csv", header=T)
+Blood.df$Obese <- ifelse(Blood.df$Overwt == 2, 1, 0)
+Blood.df$Overweight <- ifelse(Blood.df$Overwt == 1, 1, 0)
+attach(Blood.df)
+Blood.lm <- lm(SystolicBP ~ Overwt)
+Blood.lm1 <- lm(SystolicBP ~ Overweight + Obese)
+summary(Blood.lm)
+summary(Blood.lm1)
+```
+
+The results are about equal, although the single predictor is slightly better. Its $R_^2$ of 0.07106 is slightly worse than the indicator variables of 0.07109. However, its $R_{adj}^2$ is better, and its F-statistic of 38.09 is much better than the new one's of 19.02.
+
+## 16
+
+Our hypotheses are:
+\[H_{0}:r=0\]\[H_{a}:r > 0\]
+
+```{r}
+
+BaseballTimes.df <- read.csv("BaseballTimes.csv", header = T)
+attach(BaseballTimes.df)
+xx<-Runs
+yy<-Time
+originalr<-cor(Runs,Time)
+N<-1000
+permcorr<-as.numeric(0)
+for (i in 1:N){
+  newY<-sample(Time)
+  permcorr[i]<-cor(xx,newY)
+}
+```
+
+```{r}
+hist(permcorr,
+     main="Randomized correlations between Runs and Time",
+     xlab="Correlations for 1000 samples")
+origCor <- cor(Time, Runs)
+sum(permcorr>origCor) * 2 / N
+```
+
+Our p-value is 0.008 which is significant at the a = 0.05 level. Thus, we reject the null; we have convincing evidence to suggest that the correlation between Runs and Time is not 0.
+
+## 18
+
+### a, b
+
+```{r}
+BaseballTimes.lm <- lm(Time ~ Runs + Attendance)
+summary(BaseballTimes.lm)
+origCor <- summary(BaseballTimes.lm)$r.squared
+```
+
+$R^2$ is 0.535.
+
+### c, d
+
+```{r}
+attach(BaseballTimes.df)
+
+## Storing original variables and reference Correlation
+x1<-Runs
+x2<-Attendance
+yy<-Time
+
+#Generating the Samples
+N<-10000
+permr2<-as.numeric(0)
+for (i in 1:N){
+  newY<-sample(Time)
+  dummy.lm<-lm(newY~x1+x2)
+  permr2[i]<-summary(dummy.lm)$r.squared
+}
+hist(permr2,
+     main="Randomized Rsq for regressing Time on Runs and Attendance",
+     xlab="Rsq for 1000 samples")
+```
+
+### e
+
+Count up all the simulations where $R^2$ was greater than or equal to the original $R^2$, then divide by total number of simulations.
+
+```{r}
+print(sum(permr2 > origCor)/N)
+```
+
+0.01% of all samples from a population of random association between time and its predictors would have a R^2 greater than or equal to our R^2 of 0.535.
+
+### f
+
+The ANOVA's p-value was 0.01011 which was very close to our p-value of 0.01.
+
+## 19
+
+```{r}
+detach()
+attach(HighPeaks.df)
+HighPeaks.lm1 <- lm(Length ~ Time)
+summary(HighPeaks.lm1)
+print(confint(HighPeaks.lm1,2,0.9))
+```
+
+### a
+
+Our confidence interval is (0.9141373 mph, 1.240075 mph). We are 90% that our CI captures the true slope of a model fitting Length to Time.
+
+### b
+
+```{r}
+# Creating a place to store slopes, intercepts, and standard errors
+bint<-as.numeric(0)
+bslope<-as.numeric(0)
+bslopesd<-as.numeric(0)
+# Size for each bootstrap sample
+N1<-as.numeric(length(HighPeaks.df$Length))
+
+# Creating bootstrap distribution
+for (i in 1:5000){
+  #creating the bootstrap sample
+  length.dummy<-HighPeaks.df[sample(1:N1,N1,replace=TRUE),]
+  #creating a linear model
+  HighPeaks.dummylm<-lm(Length~Time,data=length.dummy)
+  #storing intercept, slope, and SD for Slope (I only need the slope right now, but I'm going to use the other information in a future example)
+  bint[i]<-HighPeaks.dummylm$coefficients[1]
+  bslope[i]<-HighPeaks.dummylm$coefficients[2]
+  bslopesd[i]<-summary(HighPeaks.dummylm)$coefficients[2,2]
+}
+
+hist(bslope,
+     main="Bootstrap Distribution for Hiking Speeds",
+     xlab="5000 Bootstrap Hiking Speeds")
+```
+
+### c
+
+```{r}
+mean(bslope)
+sd(bslope)
+```
+
+The mean is 1.093973. The sd is 0.1203734. The standard deviation is slightly lower than the original, but the means are almost about the same.
+
+### e
+
+```{r}
+print(quantile(bslope, 0.05))
+print(quantile(bslope, 0.95))
+```
+
+Our CI is (0.9247502, 1.318202)
+
+### g
+
+There is some difference, however the difference is pretty minimal.
+
+## 21
+
+```{r}
+detach()
+Perch.df <- read.csv("Perch.csv", header=T)
+attach(Perch.df)
+Perch.lm <- lm(Weight ~ Length:Width + Length + Width)
+summary(Perch.lm)
+# Creating a place to store slopes, intercepts, and standard errors
+bint<-as.numeric(0)
+bslope<-as.numeric(0)
+bslopesd<-as.numeric(0)
+# Size for each bootstrap sample
+N1<-as.numeric(length(Perch.df$Length))
+
+# Creating bootstrap distribution
+for (i in 1:5000){
+  #creating the bootstrap sample
+  weight.dummy<-Perch.df[sample(1:N1,N1,replace=TRUE),]
+  #creating a linear model
+  Perch.dummylm<-lm(Weight~Length:Width + Length + Width,data=weight.dummy)
+  #storing intercept, slope, and SD for Slope (I only need the slope right now, but I'm going to use the other information in a future example)
+  bint[i]<-Perch.dummylm$coefficients[1]
+  bslope[i]<-Perch.dummylm$coefficients[2]
+  bslopesd[i]<-summary(Perch.dummylm)$coefficients[2,2]
+}
+
+hist(bslope,
+     main="Bootstrap Distribution for Hiking Speeds",
+     xlab="5000 Bootstrap Hiking Speeds")
+```
+
+```{r}
+slope <- Perch.lm$coefficients[2]
+confint(Perch.lm, 2, 0.95)
+print(paste0("(", slope - 1.96 * sd(bslope), ", ",  slope + 1.96 * sd(bslope), ")"))
+TStar <- (bslope-slope)/bslopesd
+print(paste0("(", slope - quantile(bslope,0.975) * sd(bslope), ", ",  slope + quantile(TStar,0.25) * sd(bslope), ")"))
+print(paste0("(", slope - quantile(TStar,0.975) * sd(bslope), ", ",  slope + quantile(TStar,0.25) * sd(bslope), ")"))
+print(paste0("(", slope - (quantile(bslope,0.975) - slope), ", ",  slope - (quantile(bslope,0.025) - slope), ")"))
+```
+
+The confidence intervals are diversified in their lower and upper bounds.
+
+
+
+
+
+
+
+
+
+
+
+
