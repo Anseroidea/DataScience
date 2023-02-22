@@ -1,0 +1,23 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## 1
+
+For Levene's test, the alternate hypothesis is that at least one population variance is different. Thus, a small p-value would suggest that we reject the null. That is, at least one population variance is different.
+
+## 2
+
+Levene's Test is meant to compare variances between different combinations of factors. By doing separate tests for each factor, the Levene's test is done incorrectly.
+
+## 3
+
+```{r}
+NC.df <- read.csv("C:/Users/K1525058/IdeaProjects/DataScience/data/NCBirths.csv", header = T, stringsAsFactors = T)
+attach(NC.df)
+library(car)
+leveneTest(BirthWeightOz ~ MomRace)
+
+
+```
