@@ -8,16 +8,146 @@ output: html_notebook
 For Levene's test, the alternate hypothesis is that at least one population variance is different. Thus, a small p-value would suggest that we reject the null. That is, at least one population variance is different.
 
 ## 2
-
 Levene's Test is meant to compare variances between different combinations of factors. By doing separate tests for each factor, the Levene's test is done incorrectly.
 
 ## 3
 
 ```{r}
-NC.df <- read.csv("C:/Users/K1525058/IdeaProjects/DataScience/data/NCBirths.csv", header = T, stringsAsFactors = T)
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+#NC.df <- read.csv("C:/Users/K1525058/IdeaProjects/DataScience/data/NCBirths.csv", header = T, stringsAsFactors = T)
+NC.df <- read.csv("NCBirths.csv", header = T, stringsAsFactors = T)
 attach(NC.df)
 library(car)
 leveneTest(BirthWeightOz ~ MomRace)
-
-
+detach()
 ```
+
+Levene's Test shows that there is not enough convincing evidence to suggest that group variances are different.
+
+## 4
+
+```{r}
+swa.df <- read.csv("Swahili.csv", header = T, stringsAsFactors = T)
+attach(swa.df)
+library(car)
+leveneTest(Attitude.Score ~ Sex * School, data = swa.df)
+detach(swa.df)
+```
+
+A two-way ANOVA table would not be appropriate. Levene's Test shows us that there is convincing evidence (p-value < 0.05) that group variances are different. As such, we cannot assume constant and additive group effects.
+
+## 5
+
+### a
+
+```{r}
+slugs.df <- read.csv("SeaSlugs.csv", header = T, stringsAsFactors = T)
+attach(slugs.df)
+medians <- tapply(Percent, Time, median)
+medians
+medians[1]
+slugs.df$absDev <- abs(Percent - medians[Time/5 + 1])
+plot(slugs.df$absDev ~ Time)
+```
+
+There does not seem to be a difference in means of absolute deviations. All group means are close enough together.
+
+```{r}
+slugs.aov <- aov(I(slugs.df$absDev) ~ as.factor(slugs.df$Time))
+summary(slugs.aov)
+```
+
+F-value is 0.035, with a p-value of 0.999.
+
+```{r}
+library(car)
+leveneTest(Percent ~ as.factor(Time), data = slugs.df)
+detach()
+```
+
+F-value is 0.03511203, with a p-value of 0.99928. Results are exactly identical to the numbers calculated in b.
+
+## 6
+
+The difference is the margin of error. For Bonferroni, the significance level is alpha/2/comparisons, so its t-crit, and consequent margin of error is different from Fisher's. For Tukey's HSD, the margin of error is different due to the division by $sqrt{2}$
+
+## 7
+
+Bonferroni's intervals are wider, meaning that they sacrifice precision for accuracy. As such, they are considered conservative in their estimate of the real difference.
+
+## 8
+
+```{r}
+baseball.df <- read.csv("FantasyBaseball.csv", header = T, stringsAsFactors = T)
+attach(baseball.df)
+baseball.aov <- aov(log(Time) ~ Person)
+TukeyHSD(baseball.aov)
+```
+
+### a
+
+Every interval with JW does not include 0. Thus, only JW has a significant difference in time taken than other participants.
+
+### b
+
+We would use Tukey's or Bonferroni's because we want to ensure what we find a real difference: we want to reduce Type I errors over finding false positives.
+
+## 9
+
+```{r}
+blood.df <- read.csv("Blood1.csv", header = T, stringsAsFactors = T)
+attach(blood.df)
+pairwise.t.test(SystolicBP, as.factor(Overwt), p.adj = "bonf")
+```
+
+### a
+
+All differences are significant as they are less than alpha = 0.05.
+
+```{r}
+blood.aov <- aov(SystolicBP ~ as.factor(Overwt))
+TukeyHSD(blood.aov)
+detach()
+```
+
+### b
+
+All p-values are less than alpha = 0.05. Thus, the group differences are significant.
+
+### c
+
+The conclusions from a and b are consistent with another. I would prefer to use Tukey's interval as it has a higher precision.
+
+## 10
+
+```{r}
+attach(slugs.df)
+summary(aov(Percent ~ as.factor(Time)))
+t.crit <- qt(0.975, 34)
+LSD <- t.crit * sqrt(0.02115 * (1/6 + 1/6))
+LSD
+means <- tapply(Percent, Time, mean)
+outer(means, t(means), "-")
+```
+
+### a
+
+The differences are all significant for comparisons with the 0 group.
+
+```{r}
+TukeyHSD(aov(Percent~as.factor(Time)))
+```
+
+### b
+
+No group has all significant differences. Only 5/6 differences from 0 are significant.
+
+### c
+
+I would prefer Tukey because a false positive may urge people to add unnecessary chemicals to the water to attract slugs when in reality these compounds do nothing. These additions may disrupt the ecosystem and unnecessarily pollute.
+
+
+
+
+

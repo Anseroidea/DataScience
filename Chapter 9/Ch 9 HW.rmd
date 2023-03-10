@@ -1,0 +1,549 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+conditions function below VVV
+
+```{r}
+conditions <- function (response, factor, covariate) {
+  library(car)
+  print(leveneTest(response ~ factor))
+  aov <- aov(response ~ factor)
+  par(mfrow = c(2, 2))
+  plot(response ~ factor)
+  plot(aov$residuals ~ aov$fitted.values)
+  abline(mean(aov$residuals), 0)
+  qqnorm(aov$residuals)
+  qqline(aov$residuals)
+  hist(aov$residuals)
+  par(mfrow = c(2,2))
+  plot(response ~ covariate)
+  lm <- lm(response ~ covariate)
+  abline(lm)
+  plot(lm$residuals ~ lm$fitted.values)
+  abline(mean(lm$residuals), 0)
+  qqnorm(lm$residuals)
+  qqline(lm$residuals)
+  hist(lm$residuals)
+  par(mfrow = c(1,1))
+  plot(response ~ covariate, col = factor)
+  apply(cbind(t(sapply(by(cbind(response, covariate, factor), factor, function(subset) lm(subset[,1] ~ subset[,2], data = subset), simplify = TRUE), coef)), palette()), 1, function (subset) abline(subset[1], subset[2], col = subset[3]))
+}
+```
+
+## 1
+
+### a
+
+Constant group effects, residuals are random and independent, residuals have same variability across all groups, the residuals are normally distributed with mean 0.
+
+### b
+
+Linear correlation, Independent, Normally distributed residuals with mean 0, Equal SD for residuals across groups (homoscedasticity), Random
+
+### c
+
+The conditions for ANCOVA is a combination of both. Additionally, the factors and the covariate cannot interact.
+
+## 2
+
+### a
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+horse.df <- read.csv("HorsePrices.csv", header = T, stringsAsFactors = T)
+attach(horse.df)
+horse.sd <- tapply(Price, Sex, sd)
+horse.mean <- tapply(Price, Sex, mean)
+plot(log(horse.sd) ~ log(horse.mean))
+horse.loglm <- lm(log(horse.sd) ~ log(horse.mean))
+abline(horse.loglm)
+summary(horse.loglm)
+```
+
+First, let's check for transformations. The slope is ~0.25 which is close enough to 0. A transformation is not needed. Let's check conditions.
+
+```{r}
+
+horse.aov <- aov(Price ~ Sex)
+library(car)
+leveneTest(Price ~ Sex, horse.df)
+plot(horse.aov$residuals ~ horse.aov$fitted.values)
+abline(mean(horse.aov$residuals), 0)
+qqnorm(horse.aov$residuals)
+qqline(horse.aov$residuals)
+hist(horse.aov$residuals)
+```
+
+Our Levene's Test tells us that we do not have convincing evidence that there is a difference in the variability of price across sex. As such, group effects are constant and additive. The resids by fits plot tells us that we have constant variability in the residuals across groups and that the residuals have a mean of 0. Finally, the normal plot tells us that our residuals roughly follow the normal distribution. Conditions are met. From the question, we can assume that the random and independent condition is met.
+
+```{r}
+summary(horse.aov)
+```
+
+ANOVA says to reject the null: there are significant differences in price between sexes as the p-value is less than 0.05.
+
+### b
+
+Since the ANOVA conditions are met, we only need to check ANCOVA conditions.
+
+```{r}
+plot(Price ~ Height)
+horse.covlm <- lm(Price ~ Height)
+abline(horse.covlm)
+plot(horse.covlm$residuals ~ horse.covlm$fitted.values)
+abline(mean(horse.covlm$residuals), 0)
+qqnorm(horse.covlm$residuals)
+qqline(horse.covlm$residuals)
+hist(horse.covlm$residuals)
+```
+
+First, there appears to be a linear relationship between Price and Height. Next, the resids vs fits, save for a few high-leverage points, do not show an obvious fanning pattern. Additionally, it shows that the residuals have a mean of 0. Finally, the qqnorm plot shows that our residuals roughly follow a normal distribution. The random condition is already met in (a). The linear regression conditions are met.
+
+```{r}
+horse.models <- by(horse.df, Sex, function(subset) lm(Price ~ Height, data = subset), simplify = TRUE)
+plot(Price ~ Height, col = Sex)
+apply(t(sapply(horse.models, coef)), 1, function (subset) abline(subset[1], subset[2]))
+```
+
+We have interaction between our factor and our covariate.
+The slopes are clearly not the same: it seems that for female horses, prices tend to decrease as height increases; however, this is not the case for males.
+
+```{r}
+horse.ancovlm <- lm(Price ~ Height+Sex)
+horse.ancov <- aov(horse.ancovlm)
+summary(horse.ancov)
+summary(lm(horse.aov))
+summary(horse.ancovlm)
+detach(horse.df)
+```
+
+There is significant evidence for an association between Height and Price, yet not so for Sex and Price. As such, when accounting for Height, Sex does not seem to play a significant factor in accounting for the variability of the Price.
+
+### c
+
+I prefer ANOVA as all of its conditions are met. For ANCOVA, Height and Sex interact, meaning that for female horses, ta taller horse is likely going to cost less; meanwhile, the behavior is opposite for males. Including Height does not improve our model by much either, only contributing about 3.5% in $R^2$
+
+## 3
+
+### a
+
+```{r}
+cars.df <- read.csv("ThreeCars2017.csv", header = T, stringsAsFactors = T)
+attach(cars.df)
+cars.sd <- tapply(Price, CarType, sd)
+cars.mean <- tapply(Price, CarType, mean)
+plot(log(cars.sd) ~ log(cars.mean))
+cars.loglm <- lm(log(cars.sd) ~ log(cars.mean))
+abline(cars.loglm)
+```
+
+The points do not really fit the line, so a transformation is not necessary.
+
+```{r}
+leveneTest(Price ~ CarType, data = cars.df)
+cars.aov <- aov(Price ~ CarType)
+plot(cars.aov$residuals ~ cars.aov$fitted.values)
+abline(mean(cars.aov$residuals), 0)
+qqnorm(cars.aov$residuals)
+qqline(cars.aov$residuals)
+hist(cars.aov$residuals)
+```
+
+First, Levene's Test shows us that we do not have convincing evidence that at least one group variance is different, so group effects are constant and additive. Furthermore, as shown by the resids vs fits plot, the residuals have a mean of 0 and do not have any obvious pattern. Finally, by the qqnorm plot, the residuals roughly follow a normal distribution. By the question, the data was selected randomly, and car prices are likely going to be independent of one another.
+
+```{r}
+summary(cars.aov)
+```
+
+As our p-value of 0.0162 is less than 0.05, we reject the null. ANOVA shows us that there is convincing evidence of significant difference in Price between different CarTypes.
+
+### b
+
+Since ANOVA conditions passed, we just need to verify linear regression and interaction.
+
+```{r}
+plot(Price ~ Age)
+cars.covlm <- lm(Price ~ Age)
+abline(cars.covlm)
+plot(cars.covlm$residuals ~ cars.covlm$fitted.values)
+abline(mean(cars.covlm$residuals), 0)
+qqnorm(cars.covlm$residuals)
+qqline(cars.covlm$residuals)
+hist(cars.covlm$residuals)
+```
+
+There appears to be a linear relationship between Price and Age. Residuals are random and independent of another by the context. The residuals very roughly follow a normal distribution and have a mean of 0. There is no obvious fanning in the residuals vs fits plot. All linear regression conditions have been met.
+
+```{r}
+cars.models <- by(cars.df, CarType, function(subset) lm(Price ~ Age, data = subset), simplify = TRUE)
+plot(Price ~ Age, col = CarType)
+apply(cbind(t(sapply(cars.models, coef)), palette()), 1, function (subset) abline(subset[1], subset[2], col = subset[3]))
+```
+
+Even though the slopes are not exactly identical, they are close enough in their behavior so that it's reasonable to continue with ANCOVA.
+
+```{r}
+summary(aov(lm(Price ~ Age + CarType)))
+```
+
+As Age was significant, it was a good idea to control Price by Age. Additionally, the p-value for CarType improved from 0.0162 using regular ANOVA to 0.00102 (significant in one more level), so the differences are even more significant in Price due to CarType.
+
+```{r}
+summary(lm(cars.aov))
+summary(lm(Price ~ Age + CarType))
+```
+
+Controlling for Age dramatically improved the $R^2$ from 0.0904 to 0.8165. As such, this model is much more useful than normal ANOVA.
+
+### c
+
+ANOVA conditions have already been satisfied, so it's only ANCOVA that needs to be checked.
+
+```{r}
+plot(Price ~ Mileage)
+cars.covlm2 <- lm(Price ~ Mileage)
+abline(cars.covlm2)
+plot(cars.covlm2$residuals ~ cars.covlm2$fitted.values)
+abline(mean(cars.covlm2$residuals), 0)
+qqnorm(cars.covlm2$residuals)
+qqline(cars.covlm2$residuals)
+hist(cars.covlm2$residuals)
+```
+
+The relationship between Price and Mileage is linear. The residuals show no obvious pattern and have a mean of 0 in the residuals vs fits plot. In the qqnorm plot, the residuals roughly follow a normal distribution. We can assume randomness and independence due to the context of the question as explained in 2b.
+
+```{r}
+plot(Price ~ Mileage, col = CarType)
+apply(cbind(t(sapply(by(cars.df, CarType, function(subset) lm(Price~ Mileage, data = subset), simplify = TRUE), coef)), palette()), 1, function (subset) abline(subset[1], subset[2], col = subset[3]))
+```
+
+The slopes show very very slight interaction, but overall, slopes seem to be close enoguh together that it's reasonable to continue with ANCOVA.
+
+```{r}
+summary(aov(Price ~ Mileage + CarType))
+```
+
+Again, the p-value associated with Mileage is about 0, so controlling for Mileage was a good idea. Additionally, the p-value associated with CarType improved from 0.0162 to 0.00109. As such, this model improves upon just ANOVA.
+
+```{r}
+summary(lm(Price ~ CarType))
+summary(lm(Price ~ Mileage + CarType))
+detach(cars.df)
+```
+
+Additionally, the $R^2$ improves from a 0.0904 to a 0.7518, reinforcing the notion that this model is much better than just ANOVA.
+
+### d
+
+As the model from c had the lowest p-value associated with CarType and the highest $R^2$, it is the best model. That means that using Age in conjunction with CarType can better predict Price than Mileage with CarType or just CarType.
+
+## 4
+
+## a
+
+```{r}
+flies.df <- read.csv("FruitFlies.csv", header = T, stringsAsFactors = T)
+attach(flies.df)
+```
+
+Let's check conditions first.
+
+```{r}
+flies.sd <- tapply(Longevity, Treatment, sd)
+flies.mean <- tapply(Longevity, Treatment, mean)
+plot(log(flies.sd) ~ log(flies.mean))
+flies.loglm <- lm(log(flies.sd) ~ log(flies.mean))
+abline(flies.loglm)
+summary(flies.loglm)
+flies.transsd <- tapply(Longevity^0.5, Treatment, sd)
+flies.transmean <- tapply(Longevity^0.5, Treatment, mean)
+plot(log(flies.transsd) ~ log(flies.transmean))
+flies.translm <- lm(log(flies.transsd) ~ log(flies.transmean))
+abline(flies.translm)
+summary(flies.translm)
+detach(flies.df)
+flies.df$Longevity <- flies.df$Longevity^1
+attach(flies.df)
+```
+
+The following residual plot is just too beautiful looking to tamper with sqrt transforms.
+
+```{r}
+leveneTest(Longevity ~ Treatment, data = flies.df)
+flies.aov <- aov(Longevity ~ Treatment)
+summary(flies.aov)
+plot(flies.aov$residuals ~ flies.aov$fitted.values)
+abline(mean(flies.aov$residuals), 0)
+qqnorm(flies.aov$residuals)
+qqline(flies.aov$residuals)
+hist(flies.aov$residuals)
+```
+
+The Levene's Test returns a p-value of 0.7419, meaning that we cannot conclude that at least one group variance is different. As such, group effects are constant and additive. The treatments were randomly assigned, and longevities are independent of one another. The resids have a mean of 0 and no obvious fanning in the residuals vs fits plot. The qqnorm plot shows that the residuals have a roughly normal distribution.
+
+```{r}
+plot(Longevity ~ Thorax)
+flies.covlm <- lm(Longevity ~ Thorax)
+abline(flies.covlm)
+plot(flies.covlm$residuals ~ flies.covlm$fitted.values)
+abline(mean(flies.covlm$residuals), 0)
+qqnorm(flies.covlm$residuals)
+qqline(flies.covlm$residuals)
+hist(flies.covlm$residuals)
+```
+
+There is a linear relationship between Longevity and Thorax. Additionally, the residuals vs fits plot shows that the residuals have a mean of 0 and have no obvious pattern. Lastly, the residuals roughly follow the normal distribution.
+
+```{r}
+plot(Longevity ~ Thorax, col = Treatment)
+apply(cbind(t(sapply(by(flies.df, Treatment, function(subset) lm(Longevity ~ Thorax, data = subset), simplify = TRUE), coef)), palette()), 1, function (subset) abline(subset[1], subset[2], col = subset[3]))
+```
+
+The lines are parallel enough to assume no interaction. As such, all the ANCOVA conditions are met.
+
+```{r}
+flies.model <- lm(Longevity ~ Thorax + Treatment)
+summary(aov(flies.model))
+summary(flies.model)
+```
+
+Controlling for Thorax length was a good idea as the p-value is below all common significance levels. Also, the F-value associated with Treatment is 21.75, meaning that differences between treatments are more significant than differences within treatments. The $R^2$ for this model is 0.6564, meaning that 65.64% of the variability in longevity can be accounted for by the variability in treatment and thorax length.
+
+### b
+
+```{r}
+summary(aov(Longevity ~ Partners + Type))
+summary(lm(Longevity ~ Partners + Type))
+detach(flies.df)
+```
+
+The $R^2$ for the Partners + Type model is only 0.0931 - dramatically lower than ANCOVA's $R^2$ value of 0.6564. Additionally, the p-value for ANOVA is 0.002578 which is greater than ANCOVA's p-value of literally 0. As such, ANCOVA is a much better model because it can predict more of the variability in Longevity than the ANOVA model.
+
+## 5
+
+```{r}
+flies2.df <- read.csv("FruitFlies2.csv", header = T, stringsAsFactors = T)
+attach(flies2.df)
+flies2.sd <- tapply(Lifespan, Mated, sd)
+flies2.mean <- tapply(Lifespan, Mated, mean)
+plot(log(flies2.sd) ~ log(flies2.mean))
+flies2.loglm <- lm(log(flies2.sd) ~ log(flies2.mean))
+abline(flies2.loglm)
+summary(flies2.loglm)
+flies2.transsd <- tapply(Lifespan^-1.679, Mated, sd)
+flies2.transmean <- tapply(Lifespan^-1.679, Mated, mean)
+plot(log(flies2.transsd) ~ log(flies2.transmean))
+flies2.transloglm <- lm(log(flies2.transsd) ~ log(flies2.transmean))
+abline(flies2.transloglm)
+summary(flies2.transloglm)
+```
+
+As the slope after the transformed log-log plot is not close to 0, this transformation is ineffective. Onto ANCOVA.
+
+```{r}
+conditions(Lifespan, Mated, Size)
+```
+
+#### ANOVA
+
+Levene's Test concludes that we do not have convincing evidence that at least one group variance is different. As such, group effects are constant and additive The residual vs fits plot shows that the residuals have a mean of 0 and do not have an obvious fanning pattern. By qqplot and histogram, the residuals roughly follow a normal distribution. Residuals are random as data was randomly sampled. Lifespans are likely independent of one another.
+
+#### Linear Regression
+
+There appears to be a linear relationship between Lifespan and Size. The residuals vs fits plot does not show any obvious fanning pattern and the mean of the residuals is 0. The qqplot shows that the residuals follow a roughly normal distribution.
+
+#### ANCOVA
+
+There is slight interaction shown in the plot, but the slopes are similar enough to assume no interaction. This condition is met.
+
+```{r}
+flies2.model <- lm(Lifespan ~ Size + Mated)
+summary(aov(flies2.model))
+summary(flies2.model)
+```
+
+The p-value associated with Size is 0.8146, not significant. As such, controlling for it does not account for much variability. Meanwhile, Mated has a p-value of 0.0463, significant under the 0.05 significance level. Thus, ANCOVA is finding that differences by whether it is mated or not are more significant than individual to individual differences. The $R^2$ is 0.02016, meaning that about 2.016% of the variability in Lifespan can be accounted for by the variability in Size and Mated.
+
+### b
+
+```{r}
+summary(aov(Lifespan ~ Mated))
+summary(lm(Lifespan ~ Mated))
+detach(flies2.df)
+```
+
+The original ANOVA model has an $R^2$ of 0.01917. Although this is less than the ANCOVA model's $R^2$, the original model has a lower p-value of 0.04995 versus ANCOVA's 0.1331. Additionally, the $R^2_{adj}$ of the ANOVA model is greater than that of the ANCOVA model (0.01425 vs 0.01027). As such, the ANOVA model is preferred as it is simple without sacrificing much variability accountability.
+
+## 6
+
+```{r}
+grocery.df <- read.csv("Grocery.csv", header = T, stringsAsFactors = T)
+grocery.df$Discount <- as.factor(grocery.df$Discount)
+attach(grocery.df)
+grocery.sd <- tapply(Sales, Display, sd)
+grocery.mean <- tapply(Sales, Display, mean)
+plot(log(grocery.sd) ~ log(grocery.mean))
+grocery.loglm <- lm(log(grocery.sd) ~ log(grocery.mean))
+abline(grocery.loglm)
+summary(grocery.loglm)
+grocery.transsd <- tapply(Sales^36.47, Display, sd)
+grocery.transmean <- tapply(Sales^36.47, Display, mean)
+plot(log(grocery.transsd) ~ log(grocery.transmean))
+grocery.transloglm <- lm(log(grocery.transsd) ~ log(grocery.transmean))
+abline(grocery.transloglm)
+summary(grocery.transloglm)
+```
+
+Since the slope after transforming is 1 and not 0, this transformation is not beneficial.
+
+```{r}
+conditions(Sales, Display, Price)
+```
+
+#### ANOVA
+
+Levene's Test returns a p-value of 0.09543, meaning that we do not have convincing evidence that at least one group variance is different. As such, group effects are constant and additive. The residuals vs fits plot shows that the residuals have a mean of 0 and do not show any obvious pattern. The residuals also very roughly follow a normal distribution. Residuals are random as treatments were randomly assigned. Sales are also likely to be independent of one another.
+
+#### Linear Regression
+
+There is a linear relationship between Sales and Price. The residuals vs fits shows that the residuals have a mean of 0 and do not exhibit any obvious pattern. Also, qqplot and histogram show that the residuals roughly follow a normal distribution.
+
+#### ANCOVA
+
+There is minimal interaction in the plot because the slopes are so close to one another. As such, we can continue with ANCOVA.
+
+```{r}
+grocery.model <- lm(Sales ~ Price + Display)
+summary(aov(grocery.model))
+summary(grocery.model)
+```
+
+Price has a p-value of practically 0, meaning that controlling for Price was a good idea.  Meanwhile, the p-value associated with Display is 0.321 which is greater than alpha = 0.05. As such, there are more significant differences in sales between products of the same display location than products of the different display locations. Additionally, the $R^2$ is 0.9601, meaning that 96.01% of the variability in sales can be explained by the variability in Display and Price.
+
+### b
+
+```{r}
+grocery.sd2 <- aggregate(Sales, list(Display, Discount), sd)
+grocery.mean2 <- aggregate(Sales, list(Display, Discount), mean)
+plot(log(grocery.sd2[,3]) ~ log(grocery.mean2[,3]))
+grocery.loglm2 <- lm(log(grocery.sd2[,3]) ~ log(grocery.mean2[,3]))
+abline(grocery.loglm2)
+summary(grocery.loglm2)
+```
+
+The points do not fit the line. The data does not need a transformation.
+
+```{r}
+grocery.tab <- tapply(Sales, list(Display, Discount), mean)
+knitr::kable(grocery.tab)
+plot(grocery.tab[, 2] ~ grocery.tab[, 1], main = "Anscombe", xlim = c(193, 223), ylim = c(193, 223), col = "red", xlab = "", ylab = "")
+points(grocery.tab[, 1] ~ grocery.tab[, 3], col = "green")
+points(grocery.tab[, 2] ~ grocery.tab[, 3], col = "blue")
+grocery.tab.lm1 <- lm(grocery.tab[, 2] ~ grocery.tab[, 1])
+grocery.tab.lm2 <- lm(grocery.tab[, 3] ~ grocery.tab[, 1])
+grocery.tab.lm3 <- lm(grocery.tab[, 3] ~ grocery.tab[, 2])
+abline(grocery.tab.lm1, col = "red")
+abline(grocery.tab.lm2, col = "green")
+abline(grocery.tab.lm3, col = "blue")
+```
+
+This plot is genuinely terrible. We don't have an additive block design, so we probably have interaction.
+
+```{r}
+interaction.plot(Display, Discount, Sales,
+                 type = "b", pch = c(1, 4), col = c("red", "blue"))
+```
+
+There's interaction.
+
+
+```{r}
+library(Stat2Data)
+TukeyNonaddPlot(Sales ~ Display + Discount, data = grocery.df)
+TukeyNonaddPlot(Sales^63.2 ~ Display + Discount, data = grocery.df)
+```
+
+The dataset is so small that Tukey does not help in this case. We cannot transform to remove interaction.
+
+```{r}
+leveneTest(Sales ~ Display * Discount)
+grocery.aov <- aov(Sales ~ Display * Discount)
+plot(grocery.aov$residuals ~ grocery.aov$fitted.values)
+abline(mean(grocery.aov$residuals), 0)
+qqnorm(grocery.aov$residuals)
+qqline(grocery.aov$residuals)
+hist(grocery.aov$residuals)
+```
+
+Levene's Test tells us that we do not have convincing evidence that there are differences in group variances. As such, group effects are constant and additive. Residuals are random as treatments are random and data was randomly sampled. The resids vs fits plot shows that the residuals have a mean of 0 and do not show an obvious pattern. In the qqnorm plot, the residuals roughly follow a normal distribution.
+
+```{r}
+summary(grocery.aov)
+```
+
+Every single p-value is greater than any common p-value. As such, it seems that no explanatory variable is significant: There are more significant differences within groups (Display, Discount, interaction) than between groups. The $R^2$ is also absymal: 0.05757.
+
+```{r}
+summary(lm(grocery.aov))
+```
+
+### c
+
+The Two-Way ANOVA conditions and linear regression conditions for our covariate were already met, so only the interaction condition of ANCOVA needs to be verified.
+
+```{r}
+plot(Sales ~ Price, col = interaction(Discount, Display))
+apply(cbind(t(sapply(by(grocery.df, interaction(Discount, Display), function(subset) lm(Sales ~ Price, data = subset), simplify = TRUE), coef)), palette()), 1, function (subset) abline(subset[1], subset[2], col = subset[3]))
+```
+
+The slopes look similar enough to the point that I'm honestly too exhausted to really reject this condition.
+
+### d
+
+Finally,
+
+```{r}
+grocery.2waymodel <- lm(Sales ~ Price + Discount * Display)
+summary(aov(grocery.2waymodel))
+summary(grocery.2waymodel)
+```
+
+Price again has a very significant p-value. This means that controlling for price is a very good idea. Discount also has a significant p-value, meaning that there are more significant differences in sales between items of different discounts than between items of the same discount. The other explanatories are not significant and account for little variability in Sales. For Display, the variability between different displays is about 2.261 times greater than the errors within different combinations of display and discount. The interaction term, however, is not significant at all and contributes little to the model.
+
+```{r}
+summary(aov(Sales ~ Price + Discount + Display))
+summary(lm(Sales ~ Price + Discount + Display))
+```
+
+The interaction contributes very little to the model, so it's reasonable to throw it out. The $R^2$ reduces by very little.
+
+```{r}
+grocery.lastaov <- aov(Sales ~ Price + Discount + Display)
+leveneTest(Sales ~ Discount * Display)
+plot(grocery.lastaov$residuals ~ grocery.lastaov$fitted.values)
+abline(mean(grocery.lastaov$residuals), 0)
+qqnorm(grocery.lastaov$residuals)
+qqline(grocery.lastaov$residuals)
+hist(grocery.lastaov$residuals)
+```
+
+Conditions are still roughly met.
+
+```{r}
+summary(lm(Sales ~ Price + Discount + Display))
+summary(lm(Sales ~ Discount + Display))
+```
+
+The $R^2$ is 0.9809, and the overall p-value is approximately 0. Compared to our model in b, this model is significantly better at accounting for the variability in Sales. Not only did the $R^2$ jump from 0.05757 to 0.9809 and the $R^2_{adj}$ turn positive, but the p-value changed from almost 1 to almost 0.
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,71 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+contra.df <- read.csv("Contraceptives.csv", header = T, stringsAsFactors = T)
+attach(contra.df)
+contra.tab <- tapply(EE.AUC, list(ID, Treatment), mean)
+knitr::kable(contra.tab)
+plot(contra.tab[,1] ~ contra.tab[,2], xlab = "Placebo", ylab = "Drug")
+contra.lm <- lm(contra.tab[,1] ~ contra.tab[,2])
+abline(contra.lm, col = "salmon")
+abline(0, 1, lty = 2, col = "grey")
+require("Stat2Data")
+TukeyNonaddPlot(EE.AUC ~ ID + Treatment, data = contra.df)
+contra.df$respAdj <- EE.AUC ^ (0.52)
+contraAdj.tab <- tapply(contra.df$respAdj, list(ID, Treatment), mean)
+TukeyNonaddPlot(respAdj ~ ID + Treatment, data = contra.df)
+plot(contraAdj.tab[,1] ~ contraAdj.tab[,2], xlab = "Placebo", ylab = "Drug", main = "Adjusted Anscombe")
+contraAdj.lm <- lm(contraAdj.tab[,1] ~ contraAdj.tab[,2])
+abline(contraAdj.lm, col = "salmon")
+abline(0, 1, lty = 2, col = "grey")
+```
+
+```{r}
+alfalfa.df <- read.csv("Alfalfa.csv", header = T, stringsAsFactors = T)
+attach(alfalfa.df)
+alfalfa.tab <- tapply(Ht4, list(Row, Acid), mean)
+knitr::kable(alfalfa.tab)
+plot(alfalfa.tab[, 1] ~ alfalfa.tab[, 2], main = "Anscombe", xlim = c(0, 4), ylim = c(0, 5), col = "red", xlab = "", ylab = "")
+points(alfalfa.tab[, 3], alfalfa.tab[, 1], col = "green")
+points(alfalfa.tab[, 3], alfalfa.tab[, 2], col = "blue")
+alfalfa.lm1 <- lm(alfalfa.tab[, 1] ~ alfalfa.tab[, 2])
+alfalfa.lm2 <- lm(alfalfa.tab[, 1] ~ alfalfa.tab[, 3])
+alfalfa.lm3 <- lm(alfalfa.tab[, 2] ~ alfalfa.tab[, 3])
+abline(alfalfa.lm1, col = "red")
+abline(alfalfa.lm2, col = "green")
+abline(alfalfa.lm3, col = "blue")
+abline(0, 1, lty = 2, col = "grey")
+TukeyNonaddPlot(Ht4 ~ Row + Acid, data = alfalfa.df)
+TukeyNonaddPlot(log(Ht4) ~ Row + Acid, data = alfalfa.df)
+alfalfa.tabAdj <- tapply(log(Ht4), list(Row, Acid), mean)
+knitr::kable(alfalfa.tabAdj)
+plot(alfalfa.tabAdj[, 1] ~ alfalfa.tabAdj[, 2], main = " Adjusted Anscombe", xlim = c(-1, 2), ylim = c(-1, 2), col = "red", xlab = "", ylab = "")
+points(alfalfa.tabAdj[, 3], alfalfa.tabAdj[, 1], col = "green")
+points(alfalfa.tabAdj[, 3], alfalfa.tabAdj[, 2], col = "blue")
+alfalfa.lmAdj1 <- lm(alfalfa.tabAdj[, 1] ~ alfalfa.tabAdj[, 2])
+alfalfa.lmAdj2 <- lm(alfalfa.tabAdj[, 1] ~ alfalfa.tabAdj[, 3])
+alfalfa.lmAdj3 <- lm(alfalfa.tabAdj[, 2] ~ alfalfa.tabAdj[, 3])
+abline(alfalfa.lmAdj1, col = "red")
+abline(alfalfa.lmAdj2, col = "green")
+abline(alfalfa.lmAdj3, col = "blue")
+summary(alfalfa.lmAdj1)
+summary(alfalfa.lmAdj2)
+summary(alfalfa.lmAdj3)
+abline(0, 1, lty = 2, col = "grey")
+alfalfa.aov <- aov(log(Ht4)~Row + Acid, alfalfa.df)
+par(mfrow = c(1, 2))
+qqnorm(alfalfa.aov$residuals)
+qqline(alfalfa.aov$residuals)
+plot(alfalfa.aov$residuals ~ alfalfa.aov$fitted.values)
+summary(alfalfa.aov)
+```

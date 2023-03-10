@@ -1,0 +1,96 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## 1
+
+There are only three configurations where the average is 32 or more.
+
+3/35 = 0.0857.
+
+## 2
+
+### a
+
+There is only one configuration with an average of 16 or more.
+
+1/35 = 0.03
+
+### b
+
+Since only one other configuration will return an F-value greater than the F-value our sample received, the p-value is 2/35 = 0.06.
+
+### c
+
+(a) counts the average of the treatment group whereas (b) measures the difference in means between the treatment group and the control group. As such, the two calculations are in essence counting different things.
+
+### d
+
+a. The proportion from b calculates absolute difference, not a greater than or less than inequality. As such, if the question is whether the chimpanzees given treatment would crack more nuts, then a is the correct proportion.
+
+### e
+
+The p-value from (a) is a one-tailed t-test because it is a directional inequality. (b), measuring both directions, is an F-test which is two-sided, explaining why it's double of (a).
+
+## 3
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+flies.df <- read.csv("FruitFlies.csv", header = T, stringsAsFactors = T)
+attach(flies.df)
+N <- 10000
+maxF <- -1
+Fs <- as.numeric(0)
+pVals <- as.numeric(0)
+for (i in 1:N) {
+  sampled <- sample(Longevity)
+  aov <- aov(sampled ~ Treatment)
+  if (summary(aov)[[1]][1, 4] > maxF) {
+    maxF <- summary(aov)[[1]][1, 4]
+  }
+  Fs[i] <- summary(aov)[[1]][1, 4]
+  pVals[i] <- summary(aov)[[1]][1, 5]
+}
+hist(Fs)
+numAbove <- sum(Fs >= 13.62)
+maxF
+```
+
+### a
+
+`r numAbove`. Max F was `r maxF`
+
+## 4
+
+```{r}
+pigs.df <- read.csv("PigFeed.csv", header = T, stringsAsFactors = T)
+attach(pigs.df)
+N <- 10000
+originalSummary <- summary(aov(WgtGain ~ B12 + Antibiotics))
+originalSummary
+origF <- originalSummary[[1]][1, 4]
+maxF <- -1
+Fs <- as.numeric(0)
+pVals <- as.numeric(0)
+for (i in 1:N) {
+  sampled <- sample(WgtGain)
+  aov <- aov(sampled ~ B12 + Antibiotics)
+  if (summary(aov)[[1]][1, 4] > maxF) {
+    maxF <- summary(aov)[[1]][1, 4]
+  }
+  Fs[i] <- summary(aov)[[1]][1, 4]
+  pVals[i] <- summary(aov)[[1]][1, 5]
+}
+hist(Fs)
+numAbove <- sum(Fs >= origF)
+numAbove/10000
+estimP <- numAbove/N
+maxF
+```
+
+The estimated p-value is `r estimP` which is similar to the original p-value
+
+
+

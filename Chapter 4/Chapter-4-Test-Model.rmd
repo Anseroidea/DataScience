@@ -1,0 +1,48 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+The code chunk appears:
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+Candy.df <- read.csv("CandyRaw.csv", header = T)
+Candy.df$Cardboard <- ifelse(Candy.df$Box == "plastic", 0, 1)
+Cardboard.df <- Candy.df[Candy.df$Cardboard == 1, c(1, 2, 4)]
+Plastic.df <- Candy.df[Candy.df$Cardboard == 0, c(1, 2, 4)]
+Candy.df$LogLength <- log(Candy.df$Length)
+Candy.df$LogWidth <- log(Candy.df$Length)
+Plastic.df$LogLength <- log(Plastic.df$Length)
+Plastic.df$LogWidth <- log(Plastic.df$Length)
+Cardboard.df$LogLength <- log(Cardboard.df$Length)
+Cardboard.df$LogWidth <- log(Cardboard.df$Length)
+library(leaps)
+out<-summary(regsubsets(Candy~I(Length * Width) + I(Width ^ 2) + I(abs(exp(sin(exp(LogWidth))))) + I(Width/Length) + I(LogLength ^ Length) + I(Length ^ LogLength) + I(exp(-Length)) + I(exp(Width/LogWidth))+ I(exp(- Width / Length)) + I(exp( Length / abs(cos(Width))))  + I(exp(-abs(sin(Width)) ^ exp(sin(Length) * cos(Length))))  + I(exp((cos(LogLength * LogWidth)))) + I(pnorm(Width, mean = LogWidth, sd = LogWidth, lower.tail=FALSE)) + I(pnorm(Length, mean = LogLength, sd = exp(-LogLength), lower.tail=FALSE)) + I(pbinom(round(Width), round(Length), 1 - 1/((LogLength)), lower.tail = FALSE)) + I((Width/LogLength) ^ LogWidth) + I( factorial(LogLength) ^ Length) + I(abs(sin(Length)) ^ Width), nbest=2,data=Cardboard.df)) #named the summary so that we can call parts of it easily
+Subsets<-out$which #tells us which subsets are used (T/F)
+R2<-round(100*out$rsq,1) #storing a list of all R2 percentages
+R2adj<-round(100*out$adjr2,1) #storing a list of all R2adj percentages
+Cp<-round(out$cp,1) #storing a list of all Mallows' Cp values
+data <- cbind(Subsets,R2,R2adj,Cp) #output a dataframe showing all the info we just collected
+print(data)
+print(data[R2adj == max(R2adj),])
+#model.lm <- lm(Candy ~ I(exp(-Width)) + I(exp(-Width * Length)) + I(tan(Length + Width)) + I(1/Width) + I(cos(Width)) + I(sin(Width)) + I(cos(Length)) + I(Width^2), data = Cardboard.df)#
+#model.lm <- lm(Candy ~ I(cos(Length)) + I(cos(LogWidth)) + I(tan(Length + Width)) +  I(exp(Length)) +  I(exp(-Width)) + I(pnorm(Width, lower.tail = FALSE)) + I(pbinom(round(Width), round(Length), 1/LogLength/LogWidth)) + I(tan(Length^2)), data = Cardboard.df) 59.9
+#model.lm <- lm(Candy ~ I(pbinom(round(Width), round(Length), 1 - 1/((LogLength)), lower.tail = FALSE)) + I(pnorm(Length, lower.tail = FALSE)) + I(exp(-abs(sin(Width))^exp(sin(Length) * cos(Length)))) +  I(exp(Length/abs(cos(Width)))) + I(exp(-Width/Length)) + I(Length^LogLength) + I(exp(-Length)) + I(Width/Length), data = Cardboard.df) 61.1
+#model.lm <- lm(Candy ~ I(Width/Length) + I(exp(-Length)) + I(exp(-Width/Length)) + I(exp(Length/abs(cos(Width)))) + I(exp(-abs(sin(Width))^exp(sin(Length) * cos(Length)))) + I(pnorm(Width, mean = LogWidth, sd = LogWidth, lower.tail = FALSE)) + I(pnorm(Length, lower.tail = FALSE)) + I(pbinom(round(Width), round(Length), 1 - 1/((LogLength)), lower.tail = FALSE)), data = Cardboard.df) 61.5
+model.lm <- lm(Candy ~ I(abs(sin(Length))^Width) + I(pbinom(round(Width), round(Length), 1 - 1/((LogLength)), lower.tail = FALSE)) + I(pnorm(Width, mean = LogWidth, sd = LogWidth, lower.tail = FALSE)) + I(exp(Length/abs(cos(Width)))) + I(exp(Width/LogWidth))  + I(Length^LogLength)  + I(abs(exp(sin(exp(LogWidth)))))  + I(Length * Width) , data = Cardboard.df)
+summary(model.lm)
+multreg.conditionplots <- function(linreg){
+  par(mfrow= c(2,2))
+  plot(linreg$fitted.values + linreg$residuals~linreg$fitted.values, ylab="Response", xlab="Fitted values", main = "Response by Fitted values") #filler plot to appease par's 2x2
+  hist(linreg$residuals, xlab="Residuals", main="Histogram of residuals") #histogram of residuals
+  plot(linreg$residuals~linreg$fitted.values, xlab="Fitted values", ylab="Residuals") #resid plot of residuals vs fitted values
+  qqnorm(linreg$residuals) #the qqnorm plot of the residuals
+  qqline(linreg$residuals)
+}
+multreg.conditionplots(model.lm)
+```
+$1$
+
+$\hat{Candy} = \beta_0 + \beta_1 \cdot \left|\sin{Length}\right|^{Width} + \beta_2 \cdot \text{binomCdf}\left(\text{round}\left(Width\right), \text{round}\left(Length\right), 1 - \frac{1}{\log{Length}}, \text{lower.tail = FALSE}\right) + \beta_3 \cdot {e}^{\frac{Length}{\left|\cos{Width}\right|}} + \beta_4 \cdot \text{normCdf}\left(Width, \log{Width}, \log{Width}, \text{lower.tail = FALSE}\right)+ \beta_5 \cdot {e}^{\frac{Width}{\log{Width}}} + \beta_6 \cdot Length^{\log{Length}} + \beta_7 \cdot \left|e^{\sin{e^{\log{Width}}}}\right| + \beta_8 \cdot Length \cdot Width$

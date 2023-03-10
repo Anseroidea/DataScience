@@ -1,0 +1,159 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## 1
+
+### a
+For each sex, split the 10 people randomly into two groups of 5: one for the treadmill and one for the rowing machine. Each "group" of people will have 5 subjects. There will be 2 factors: sex and exercise machine. Sex is observational while the exercise machine is experimental.
+### b
+Have each person participate in both exercise methods, but randomly assign for each person which machine they exercise first on. There are still two factors.
+### c
+Sex goes with the larger units while exercise machine goes with the smaller units.
+
+## 2
+
+### a
+The server is neither a block nor a unit. Sex itself is observational, not randomized, so using a completely randomized block design is incorrect.
+### b
+Sex has 1 df, differences within the server has 1 df, the interactions have 1 df, and the error has 96 df.
+### c
+There is only one server for each block, meaning that there is no replication for Sex. Thus, the experimental design in essence is flawed.
+### d
+For each server, record tips for 50 consecutive tables, but randomly, for 25 of them, draw a happy face on the back of the check.
+
+## 3
+
+### a
+Factor - Sex (Observational, 2 levels: Male, Female), Happy Face (Experimental, 2 levels: Yes or No)
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+data.df <- data.frame(Tip=c(0.18, 0.21, 0.33, 0.28), Sex=c("M", "M", "F", "F"), Happy = c("Y", "N", "Y", "N"))
+attach(data.df)
+interaction.plot(Sex, Happy, Tip,
+                 type = "b", pch = c(1,4), col = c("red", "blue"),)
+detach()
+```
+
+Because the lines are not parallel, there is an interaction between them. There are differences in response from one sex to the another due to whether a happy face was on the back of a check.
+
+## 4
+
+### a
+
+```{r}
+oil.df <- read.csv("OilDeapsorbtion.csv", header = T, stringsAsFactors = T)
+attach(oil.df)
+par(mfrow=c(1,2))
+plot(diff ~ Ultra)
+plot(diff ~ Oil)
+detach()
+```
+
+Initially, it seems that an increase in ultrasound may lower the difference in oil deapsorbed. This seems to be the case in the opposite direction for the amount of oil. I think that oil will definitely be significant, however ultrasound not as much.
+
+### b
+
+```{r}
+attach(oil.df)
+interaction.plot(Ultra, Oil, diff,
+                 type = "b", pch = c(1, 4), col = c("red", "blue"))
+detach()
+```
+
+As the two slopes are not parallel, there is some interaction.
+
+### c
+
+```{r}
+attach(oil.df)
+par(mfrow = c(2, 2))
+library(lattice)
+tab <- tapply(diff, list(Ultra, Oil), mean)
+adjTab <- data.frame(diff = c(0.5, 0.8, 1.55, 1.10), Ultra = c(5, 10, 5, 10), Oil = c(5, 5, 10, 10))
+xyplot(adjTab$diff~adjTab$Ultra,groups=adjTab$Oil,auto.key=list(space="right"),
+       panel=function(x,y,...){
+         panel.xyplot(x,y,...)
+         panel.abline(h=mean(adjTab$diff),col="grey",lty=2,...)
+       }
+)
+plot(tab[, 1], tab[, 2])
+summary(lm(tab[, 1] ~ tab[, 2]))
+aov <- aov(diff ~ Ultra * Oil, data = oil.df)
+qqnorm(aov$residuals)
+qqline(aov$residuals)
+plot(aov$residuals ~ aov$fitted.values)
+detach()
+```
+
+The slope is far from 1, so we cannot say our model is additive. The normal plot and the residuals by fitted show concerning patterns as well.
+
+## 5
+
+### a
+
+```{r}
+ric.df <- read.csv("Ricci.csv", header =  T, stringsAsFactors = T)
+attach(ric.df)
+plot(Combine ~ Position)
+detach()
+```
+
+There seems to be a slight different in mean scores.
+
+### b
+
+```{r}
+attach(ric.df)
+interaction.plot(Race, Position, Combine,
+                 type = "b", pch = c(1, 4), col = c("red", "blue"))
+detach()
+```
+
+The slopes are not parallel, so there seems to be interaction.
+
+### c
+
+```{r}
+attach(ric.df)
+tab <- tapply(Combine, list(Race, Position), mean)
+tab
+sendHelp <- data.frame(Position = c("Captain", "Captain", "Captain", "Lieutenant", "Lieutenant", "Lieutenant"), Race = c("B", "H", "W", "B", "H", "W"), Combine = c(63.7820, 68.5465, 74.1128, 63.71726, 63.62453, 71.84326))
+library(lattice)
+xyplot(sendHelp$Combine~sendHelp$Position,groups=sendHelp$Race,auto.key=list(space="right"),
+       panel=function(x,y,...){
+         panel.xyplot(x,y,...)
+         panel.abline(h=mean(sendHelp$Combine),col="grey",lty=2,...)
+       }
+)
+aov <- aov(Combine ~ Position * Race, data = ric.df)
+qqnorm(aov$residuals)
+qqline(aov$residuals)
+plot(aov$residuals ~ aov$fitted.values)
+detach(ric.df)
+```
+
+The residuals approximately follow the normal line and there is no obvious pattern in the resids vs fit. An additive model would also be appropriate.
+
+### d
+
+```{r}
+lsdBW <- sqrt(72.6) * qt(0.975, 212) * sqrt(1/69 + 1/28)
+lsdBH <- sqrt(72.6) * qt(0.975, 212) * sqrt(1/23 + 1/28)
+lsdWH <- sqrt(72.6) * qt(0.975, 212) * sqrt(1/23 + 1/69)
+lsdBW
+lsdBH
+lsdWH
+attach(ric.df)
+summary(aov)
+mean <- tapply(Combine, Race, mean)
+outer(mean, t(mean), "-")
+```
+
+Race is significant, but Position nor Position by Race are not.
+
+Looking at LSD, as comparisons with White are all above the LSD, we can conclude that there was no type I error for differences between White and other races. However, this does not apply for the other races.
+
+

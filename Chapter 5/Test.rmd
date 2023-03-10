@@ -1,0 +1,176 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+---
+title: "Test"
+output: html_document
+date: "2023-01-23"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 1
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+#df1 <- read.csv("C:/Users/K1525058/Downloads/FantasyBaseball.csv", header = T, stringsAsFactors = T)
+df1 <- read.csv("FantasyBaseball.csv", header = T, stringsAsFactors = T)
+attach(df1)
+library(lattice)
+xyplot(Time~Person,df1,
+       panel=function(x,y,col,...){
+         panel.xyplot(x,y,col="blue",...)
+         panel.abline(h=mean(Time),col="grey",lty=2)
+       }
+)
+aov<-aov(Time~Person,data = df1)
+xyplot(Time~Person,data=df1,
+       panel=function(x,y,col,...){
+         panel.xyplot(x,y,col="blue",...)
+         panel.abline(h=0,lty=2)
+       },
+       ylab="Residuals"
+)
+qqnorm(aov$residuals)
+qqline(aov$residuals)
+```
+
+Group effects do not appear to be constant. The residuals are not normal. There are also outliers. Transformations are necessary.
+
+
+```{r}
+means1 <- tapply(Time, Person, mean)
+sd1 <- tapply(Time, Person, sd)
+plot(log(sd1) ~ log(means1))
+lm1 <- lm(log(sd1) ~ log(means1))
+summary(lm1)
+slope <- lm1$coefficients[2]
+```
+
+our slope is 0.669, so our exponent is 1 - p = 0. our exponent will be 0.331
+
+```{r}
+df1$TimeTrans <- Time ^ (1 - slope)
+detach(df1)
+attach(df1)
+xyplot(TimeTrans~Person,data=df1,
+       panel=function(x,y,col,...){
+         panel.xyplot(x,y,col="blue",...)
+         panel.abline(h=mean(TimeTrans),col="grey",lty=2)
+       }
+)
+aov1<-aov(TimeTrans~Person,data = df1)
+xyplot(TimeTrans~Person,data=df1,
+       panel=function(x,y,col,...){
+         panel.xyplot(x,y,col="blue",...)
+         panel.abline(h=0,lty=2)
+       },
+       ylab="Residuals"
+)
+qqnorm(aov1$residuals)
+qqline(aov1$residuals)
+
+
+
+```
+
+The group spreads are about the same. The residuals follow a normal distribution. Observations are independent of one another. The group effects are constant and additive, so we can continue with ANOVA.
+
+The null hypothesis is that all mean times are the same.
+The alternative hypothesis is that at least one mean time is different.
+
+```{r}
+summary(aov1)
+```
+
+Our p-value of about 0 is less than alpha = 0.05, so we reject the null. We have convincing evidence that at least one mean time is different.
+
+```{r}
+detach(df1)
+attach(df1)
+n<-tapply(TimeTrans,Person,length)
+mean<-round(tapply(TimeTrans,Person,mean),2)
+SD<-round(tapply(TimeTrans,Person,sd),2)
+summary1 <- cbind(n, mean, SD)
+summary1
+errors<-aov1$residuals
+MSE<-sum(errors^2)/(sum(n)-8)
+t.crit<-qt(.975,sum(n)-8)
+```
+```{r}
+MSE
+margin1.1 <- t.crit * sqrt(MSE) * sqrt(1/24 + 1/24)
+paste0("(", (5.18 - 3.52) - margin1.1, ", ", (5.18 - 3.52) + margin1.1, ")")
+```
+
+The above interval is the confidence interval between JW and MF.
+
+Because 0 is not in this confidence interval, we can say with 95% confidence that there is in fact a difference in at least one pair of people in the time that they take to choose fantasy baseball players.
+
+
+```{r}
+
+effectSize<-(mean-mean(df1$TimeTrans))/sqrt(MSE)
+effectSize
+mean(df1$TimeTrans[Person == "TS"]) - mean(df1$TimeTrans[Person == "JW"])/sqrt(MSE)
+```
+
+The effect size of the JW group means that the drop in mean time taken to select for this person is 1.37 standard errors below from the overall mean time. Comparatively,
+the mean time taken for TS to select a player is 2.53 standard deviations below the mean time taken for JW. There definitely is a difference in the mean times taken.
+
+Because our F-stat result was significant, we do LSD.
+
+```{r}
+LSD <- t.crit * sqrt(MSE) * sqrt(1/24 + 1/24)
+LSD
+diffs<-outer(mean,t(mean),"-")
+diffs
+```
+
+Because all pairs with JW and TS are magnitudinally greater than our LSD of 0.6, we can be confident that any significant results comparing these groups to any other group is not a type I error. However, for the other groups, we cannot be as sure.
+
+# 2
+
+```{r}
+detach()
+df2 <- read.csv("AutoPollution.csv", header = T, stringsAsFactors = T)
+df2$Type <- as.factor(df2$Type)
+attach(df2)
+library(lattice)
+xyplot(Noise~Type,df2,
+       panel=function(x,y,col,...){
+         panel.xyplot(x,y,col="blue",...)
+         panel.abline(h=mean(Noise),col="grey",lty=2)
+       }
+)
+aov2<-aov(Noise~Type,data = df2)
+xyplot(Noise~Type,data=df2,
+       panel=function(x,y,col,...){
+         panel.xyplot(x,y,col="blue",...)
+         panel.abline(h=0,lty=2)
+       },
+       ylab="Residuals"
+)
+qqnorm(aov2$residuals)
+qqline(aov2$residuals)
+noiseSD <-tapply(Noise,Type,sd)
+max(noiseSD)/min(noiseSD)
+```
+
+Residuals are definitely not normally distributed. However, group effects are constant enough. Assuming the data wa We cannot perform ANOVA. Still, for the spirit of the test, let's do ANOVA.
+
+Null hypothesis: The true mean noise levels for both filters are the same
+Alternative hypothesis: The true mean noise levels for both filters are different
+
+```{r}
+summary(aov2)
+```
+
+We get an F-value of 1.246 which corresponds to a p-value of 0.272 which is less than alpha = 0.05. As such, we fail to reject the null: we do not have convincing evidence that there is a difference between the mean noise levels of the filters.
+
+## 3
