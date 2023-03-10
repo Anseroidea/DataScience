@@ -51,8 +51,8 @@ The conditions for ANCOVA is a combination of both. Additionally, the factors an
 ### a
 
 ```{r}
-setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
-knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+setwd("C:/Users/K1525058/Downloads")
+knitr::opts_knit$set(root.dir = "C:/Users/K1525058/Downloads")
 horse.df <- read.csv("HorsePrices.csv", header = T, stringsAsFactors = T)
 attach(horse.df)
 horse.sd <- tapply(Price, Sex, sd)
@@ -109,7 +109,7 @@ apply(t(sapply(horse.models, coef)), 1, function (subset) abline(subset[1], subs
 ```
 
 We have interaction between our factor and our covariate.
-The slopes are clearly not the same: it seems that for female horses, prices tend to decrease as height increases; however, this is not the case for males.
+The slopes are clearly not the same: it seems that for female horses, prices tend to decrease as height increases; however, this is not the case for males. Thus, this ANCOVA condition is violated.
 
 ```{r}
 horse.ancovlm <- lm(Price ~ Height+Sex)
@@ -120,11 +120,11 @@ summary(horse.ancovlm)
 detach(horse.df)
 ```
 
-There is significant evidence for an association between Height and Price, yet not so for Sex and Price. As such, when accounting for Height, Sex does not seem to play a significant factor in accounting for the variability of the Price.
+There is significant evidence for an association between Height and Price, yet not so for Sex and Price. As such, when accounting for Height, Sex does not seem to play a significant factor in accounting for the variability of the Price. As such, a model with only Height may be better.
 
 ### c
 
-I prefer ANOVA as all of its conditions are met. For ANCOVA, Height and Sex interact, meaning that for female horses, ta taller horse is likely going to cost less; meanwhile, the behavior is opposite for males. Including Height does not improve our model by much either, only contributing about 3.5% in $R^2$
+I prefer ANOVA as all of its conditions are met. For ANCOVA, Height and Sex interact, meaning that for female horses, a taller horse is likely going to cost less; meanwhile, the behavior is opposite for males. Including Height does not improve our model by much either, only contributing about 3.5% in $R^2$
 
 ## 3
 
@@ -353,7 +353,7 @@ Levene's Test concludes that we do not have convincing evidence that at least on
 
 #### Linear Regression
 
-There appears to be a linear relationship between Lifespan and Size. The residuals vs fits plot does not show any obvious fanning pattern and the mean of the residuals is 0. The qqplot shows that the residuals follow a roughly normal distribution.
+There isn't a linear relationship between Lifespan and Size. The residuals vs fits plot does not show any obvious fanning pattern and the mean of the residuals is 0. The qqplot shows that the residuals follow a roughly normal distribution. As such, the conditions for the linear regression conditions for ANCOVA are not met.
 
 #### ANCOVA
 
@@ -375,7 +375,7 @@ summary(lm(Lifespan ~ Mated))
 detach(flies2.df)
 ```
 
-The original ANOVA model has an $R^2$ of 0.01917. Although this is less than the ANCOVA model's $R^2$, the original model has a lower p-value of 0.04995 versus ANCOVA's 0.1331. Additionally, the $R^2_{adj}$ of the ANOVA model is greater than that of the ANCOVA model (0.01425 vs 0.01027). As such, the ANOVA model is preferred as it is simple without sacrificing much variability accountability.
+The original ANOVA model has an $R^2$ of 0.01917. Although this is less than the ANCOVA model's $R^2$, the original model has a lower p-value of 0.04995 versus ANCOVA's 0.1331. Additionally, the $R^2_{adj}$ of the ANOVA model is greater than that of the ANCOVA model (0.01425 vs 0.01027). As such, the ANOVA model is preferred as it is simple without sacrificing much variability accountability in the Lifespan. Additionally, all of ANOVA's conditions were met, as opposed to ANCOVA's imperfect conditions.
 
 ## 6
 
@@ -421,7 +421,7 @@ summary(aov(grocery.model))
 summary(grocery.model)
 ```
 
-Price has a p-value of practically 0, meaning that controlling for Price was a good idea.  Meanwhile, the p-value associated with Display is 0.321 which is greater than alpha = 0.05. As such, there are more significant differences in sales between products of the same display location than products of the different display locations. Additionally, the $R^2$ is 0.9601, meaning that 96.01% of the variability in sales can be explained by the variability in Display and Price.
+Price has a p-value of practically 0, meaning that controlling for Price was a good idea.  Meanwhile, the p-value associated with Display is 0.321 which is greater than alpha = 0.05. As such, there are more significant differences in sales between products of the same display location than products of the different display locations. Additionally, the $R^2$ is 0.9601, meaning that 96.01% of the variability in sales can be explained by the variability in Display and Price. As Display was not significant, this model could possibly be improved if Display is removed.
 
 ### b
 
