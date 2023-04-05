@@ -1,0 +1,214 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+## 1
+
+This is because linear regression extrapolates the explanatory to probabilities past 0 or 1 (which violates the definition of a probability).
+
+```{r}
+toodds <- function(p) {
+  return(p/(1-p))
+}
+toprob <- function(o) {
+  return(o/(o+1))
+}
+```
+
+## 2
+
+### a
+If P(A) = .5, then the OR is `r toodds(.5)`:1
+
+### b
+If P(A) = 0.63, then the OR is `r toodds(0.63)`:1
+
+### c
+If OR(A) = 2:1, then P(A) is `r toprob(2)`
+
+### d
+If OR(A) = 2:11, then P(A) is `r toprob(2/11)`
+
+## 3
+
+### a
+0.3/0.1 = 3:1
+
+### b
+.60/0.01 = 60:1
+
+## 4
+
+### a
+
+```{r}
+toprobmodel <- function(b0, b1) {
+  return(function(x) {
+    return(exp(b0 + b1 * x)/(1 + exp(b0 + b1 * x)))
+  })
+}
+plotprobmodelfromlogodds <- function(b0, b1, x = c((log(99)-b0)/b1, (-log(99)-b0)/b1), y = c(0, 1), numpoints = 100) {
+  x <- x[order(x)]
+  plot(0, 0, type = "n", xlab = "Explanatory", ylab = "Probability", xlim=x, ylim = y)
+  expls <- as.numeric(0)
+  resps <- as.numeric(0)
+  for(i in 1:numpoints){
+    expl <- (x[length(x)] - x[1]) * (i-1)/(numpoints-1) + x[1]
+    resp <- toprobmodel(b0, b1)(expl)
+    expls[i] <- expl
+    resps[i] <- resp
+  }
+  points(-b0/b1, 0.5)
+  text(-b0/b1, 0.5, paste0("(",round(-b0/b1, 2), ", ", 0.5,")"), pos = 4)
+  lines(expls, resps)
+}
+plotprobmodelfromlogodds(2, -3)
+```
+
+Yes I coded a function for this. Does it not look beautiful?
+
+### b
+
+```{r}
+plotprobmodelfromlogodds(2, -1)
+```
+
+Our plot horizontally stretches by a factor of 3. Also, the slope of the graph when P(X = 1) = 0.5 decreased by a factor of 3. Of course, the range of probability does not change (0 - 1).
+
+### c
+```{r}
+plotprobmodelfromlogodds(5, -3)
+```
+
+The graph is not stretched, but shifted to the right 1 unit in explanatory ((5 - 2)/-3 = -1). The inflection point is now at (1.67, 0.5). The slope when P(X = 1) = 0.5 doesn't change. Again, the range of probability does not change.
+
+### d
+```{r}
+plotprobmodelfromlogodds(2, 3)
+```
+
+The new probability model maintains shape and does not stretch, but the reflection in the slope reflects the model across the y-axis. Instead of the inflection point of the model being at (0.67, 0.5), it is instead at (-0.67, 0.5). Again, the range of probability does not change.
+
+## 5
+
+### a
+
+Never. None of the models can cross the x-axis ($y = 04), only approach it.
+
+### b
+
+Always. When $X = 0$ (meaning the y-axis), the $\log{(\text{odds})}$ expression simplifies to $\beta_{0}$ only. As $\beta_{0}$ is consistent across models, the y-value/log(odds) are the same.
+
+### c
+
+Always. The horizontal asymptotes for any probability function will be $y = 0$ and $y = 1$.
+
+### d
+
+Never. The x-value of an inflection point (when $P(Y = 1) = 0.5$, or $OR = 1:1$) occurs when $log{odds}$ = 0 or $\beta_0 + \beta_1X = 0$. As this function is linear, there is only one x-value at which this function evaluates to 0. Changing the slope or $\beta_1$ would guarantee a different zero to this function.
+
+### e
+
+The same as d.
+
+## 6
+
+```{r}
+newslope <- -0.566 * 3
+```
+
+The new model is $\log{(\text{odds})} = `r round(3.257 * 3, 3)` + `r round(newslope, 3)`(Length)$.
+
+As our new slope is $`r round(newslope, 3)`$, the corresponding OR is $`r round(exp(newslope), 3)`$ meaning that an increase in 1 yard putt decreases the odds of making the putt by a factor of $`r round(exp(newslope), 3)`$. Conversely, your odds of making the putt increase $`r round(1/exp(newslope), 3)`$-fold from a 1-yard decrease in putt length. This is contrasted with our original model which had an OR of $`r round(exp(-0.566), 3)`$, meaning that a 1-foot increase in putt length corresponds with a decrease in odds of making the putt by a factor of $`r round(exp(-0.566), 3)`$. Or, your odds of making a putt increase by $`r round(1/exp(-.566),3)`$-fold from a 1-foot decrease in putt length. Notably, $`r round(1/exp(-.566), 3)`^3 = `r round(1/exp(-.566 * 3), 3)`$.
+
+## 7
+
+```{r}
+getoddsmodel <- function(b0, b1) {
+  return(function(x) {
+      return(exp(b0 + b1 * x))
+  })
+}
+model <- getoddsmodel(-2.086, 0.5117)
+```
+
+### a
+
+The odds of metastasis are $`r round(model(6), 3)`:1$ if a patient's tumor is 6cm.
+
+### b
+
+The probability of metastasis if a patient's tumor is 6cm is $`r round(toprob(model(6)), 3)`$.
+
+### c
+
+The estimated odds of metastasis change by a factor of $`r round(exp(0.5117),3)`$ which is the odds ratio. This means that the odds of a tumor of 6cm metastasizing is $`r round(exp(0.5117), 3)`$ times less than the odds of the tumor of 7cm metastasizing.
+
+### d
+
+The estimate of $\pi$ changes from $`r round(toprob(model(6)), 3)`$ for 6cm to $`r round(toprob(model(7)), 3)`$ for 7cm. this means that there is a $0.728$ probability that a 6 centimeter tumor will metastasize and a $0.817$ probability that a 7 centimeter tumor will metastasize.
+
+### e
+
+A tumor will need to be at least $`r round((log(toodds(0.8))+2.086)/0.5117, 3)`$ centimeters for its estimated probability of metastasis to be at least $0.80$.
+
+## 8
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+dogs.df <- read.csv("WalkTheDogs.csv", header = T, stringsAsFactors = T)
+attach(dogs.df)
+plot(Walk ~ Steps)
+log.lm <- glm(Walk ~ Steps, family = binomial)
+summary(log.lm)
+inter <- coefficients(summary(log.lm))[[1]]
+slope <- coefficients(summary(log.lm))[[2]]
+plotprobmodelfromlogodds(inter, slope)
+detach(dogs.df)
+```
+
+### a
+
+Our logit model is $\log{(\text{odds})} = `r round(inter, 3)` + `r round(slope, 3)`(Steps)$. Our probability model is $\hat{\pi} = \frac{e^{`r round(inter, 3)` + `r round(slope, 3)`(Steps)}}{1 + e^{`r round(inter, 3)` + `r round(slope, 3)`(Steps)}}$
+
+### b
+The estimated odds ratio is $`r round(exp(slope), 3)`$. This means that a 1-step increase increases the odds of walking the dog by a factor of $`r round(exp(slope), 3)`$.
+
+### c
+
+The estimated model predicts that the probability the dog was walked when $Steps = 4$ was $`r round(toprob(getoddsmodel(inter, slope)(4)), 3)`$
+
+### d
+
+The number of steps so that we would have a roughly 50-50 chance of the dog being walked would be $`r round(-inter/slope, 3)`$
+
+## 9
+
+```{r}
+med.df <- read.csv("MedGPA.csv", header = T, stringsAsFactors = T)
+attach(med.df)
+plot(Acceptance ~ MCAT)
+log.lm <- glm(Acceptance ~ MCAT, family = binomial)
+summary(log.lm)
+inter <- coefficients(summary(log.lm))[[1]]
+slope <- coefficients(summary(log.lm))[[2]]
+plotprobmodelfromlogodds(inter, slope)
+detach(med.df)
+```
+
+### a
+
+Our logit model is $\log{(\text{odds})} = `r round(inter, 3)` + `r round(slope, 3)`(MCAT)$. Our probability model is $\hat{\pi} = \frac{e^{`r round(inter, 3)` + `r round(slope, 3)`(MCAT)}}{1 + e^{`r round(inter, 3)` + `r round(slope, 3)`(MCAT)}}$
+
+### b
+The estimated odds ratio is $`r round(exp(slope), 3)`$. This means that a 1 point increase on the MCAT increases the odds of acceptance by a factor of $`r round(exp(slope), 3)`$.
+
+### c
+
+The estimated model predicts that the probability that someone got accepted when their MCAT score was 40 was $`r round(toprob(getoddsmodel(inter, slope)(40)), 3)`$
+
+### d
+
+The MCAT score a student would have to achieve so that they would have a roughly 50-50 chance of being accepted to the medical school would be $`r round(-inter/slope, 3)`$

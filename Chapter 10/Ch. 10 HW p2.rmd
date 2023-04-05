@@ -1,0 +1,374 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+setwd("C:/Users/aidan/IdeaProjects/DataScience/data")
+knitr::opts_knit$set(root.dir = "C:/Users/aidan/IdeaProjects/DataScience/data")
+```
+
+```{r}
+toodds <- function(p) {
+  return(p/(1-p))
+}
+toprob <- function(o) {
+  return(o/(o+1))
+}
+```
+
+## 1
+
+The logOdds for single mothers with boys to remarry is `r log(176/(310 - 176))`. The logOdds for single mothers with girls to remarry is `r log(148/(290 - 148))`.
+
+```{r}
+plot(0, log(176/(310 - 176)), xlim = c(0,1), ylim=c(0,1))
+points(1, log(148/(290 - 148)))
+summary(lm(c(log(176/(310 - 176)), log(148/(290 - 148))) ~ c(0,1)))
+```
+
+The slope of this line is -0.2313.
+
+## 2
+
+### a
+
+```{r}
+titanic.df <- read.csv("Titanic.csv", header = T, stringsAsFactors = T)
+attach(titanic.df)
+titanic.tab <- tapply(Survived, list(SexCode), mean)
+knitr::kable(titanic.tab)
+```
+
+Looking at the table, it seems that females had a higher chance of surviving. Based off the sex of the passenger, the probability of surviving increased from 0.16686 for males to 0.666666 for females
+
+### b
+
+```{r}
+titanic.lm <- glm(Survived ~ SexCode, family = "binomial")
+summary(titanic.lm)
+```
+
+Based off the p-value associated with Sex which is less than alpha = 0.05, it appears that Sex is a significant factor in determining whether a titanic passenger survived. From a female (SexCode = 1) to a male (SexCode = 0), the odds of surviving decreased by a factor of `r exp(-2.30118)`. This model confirms our initial readings from the two-way table.
+
+Doing the G test, we get a p-value of 0 which is less than alpha = 0.05. This confirms the results from our Wald test.
+
+### c
+
+The odds ratio for the changes in the odds of survival based on a passenger's sex is `r exp (-2.30118)`. This means that the odds of you surviving the Titanic would be `r exp(-2.30118)` times   lower if you were a male than if you were a female.
+
+### d
+
+```{r}
+titanic.lower <- 2.30118 - 1.96 * 0.13488
+titanic.higher <- 2.30118 + 1.96 * 0.13488
+
+```
+
+Our interval is (`r exp(titanic.lower)`, `r exp(titanic.higher)`)
+
+We are 95% confident that the true ratio between the odds of a male passenger surviving and a female passenger surviving the Titanic is between our interval of (`r exp(titanic.lower)`, `r exp(titanic.higher)`)
+
+### e
+
+```{r}
+titanic.tab <- cbind(titanic.tab, lapply(titanic.tab, toodds), lapply(titanic.tab, function(x) {
+  return(log(toodds(x)))
+}))
+colnames(titanic.tab) <- c("proportions", "odds", "empiricallogit")
+knitr::kable(titanic.tab)
+slope <- titanic.tab[[6]] - titanic.tab[[5]]
+```
+
+Calculated slope is `r titanic.tab[[6]]` - `r titanic.tab[[5]]` or `r titanic.tab[[6]] - titanic.tab[[5]]`, which is consistent with the glm output.
+
+### f
+```{r}
+toprobmodel <- function(b0, b1) {
+  return(function(x) {
+    return(exp(b0 + b1 * x)/(1 + exp(b0 + b1 * x)))
+  })
+}
+detach()
+```
+
+The probability a female would have survived the sinking of the ship is `r toprobmodel(0.69315, -2.30118)(0) `
+
+### g
+
+_Linear?_ Predictor is binary, so the empirical logit plot has to be linear.
+
+_Random?_ Even though it doesn't say it in the problem, it's probably safe to assume that this partial list of passengers is representative of the population.
+
+_Independence?_ Whether one person survives likely does not affect the survival of others.
+
+## 3
+
+With our analysis above, our model predicts that females have a `r toprobmodel(0.69315, -2.30118)(0)` chance of surviving as compared to the `r toprobmodel(0.69315, -2.30118)(1) ` chance for males. That means that females are predicted to have `r exp(2.30118)` times better odds of surviving than males. As such, it's clear to see that whether a passenger was female or not had a large factor in whether they survived. Our glm's outputted p-value of approximately 0 corroborates this claim. We can say this model fits because the predictor is binary in nature, the sample data is representative of its population, and the response variables are reasonably independent of one another. Furthermore, our 95% CI of (`r exp(titanic.lower)`, `r exp(titanic.higher)`) from male to female does not contain the odds ratio 1. Thus, we can conclude that there is in fact a decrease in odds of survival from male to female, as stated earlier.
+
+## 4
+```{r}
+
+
+```
+
+## a
+
+```{r}
+gpa.df <- read.csv("FirstYearGPA.csv", header = T, stringsAsFactors = T)
+gpa.first.df <- gpa.df[gpa.df$FirstGen == 1,]
+gpa.notfirst.df <- gpa.df[gpa.df$FirstGen == 0,]
+```
+
+STATS TIME
+
+Our hypotheses are:
+
+\[H_{0}:\bar{x}_{NF} = \bar{x}_F\]\[H_{a}:\bar{x}_{NF}\neq\bar{x}_F\]
+
+_Random_: Data was probably collected from a random sample of students
+
+_Independent_: It's safe to assume that `r length(gpa.first.df$GPA)` is less than 10% of all first generation college attendees like the ones sampled. Additionally, it's safe to assume that `r length(gpa.notfirst.df$GPA)` is less than 10% of all non-first generation college attendees like the ones sampled.
+
+_Normal?_: Our sample size is larger than 30 for the sample of non-first generation college students, so by the Central Limit Theorem, it's safe to say that the sampling distribution of $\bar{x_{NF} q}$ is normal. However, this does not apply to the first generation college student sample.
+
+```{r}
+hist(gpa.first.df$GPA)
+```
+
+This definitely does not look normal, but as the sample size is close enough to 30, we proceed with caution.
+
+```{r}
+t.test(gpa.first.df$GPA, gpa.notfirst.df$GPA)
+```
+
+As our p-value is 0.02017 which is less than alpha = 0.05, we reject the null hypothesis. This means that we have evidence to conclude that the true mean GPA of first generation college students like the ones sampled is less than the true mean GPA of non-first generation college students like the ones sampled.
+
+### b
+
+```{r}
+attach(gpa.df)
+gpa.lm <- lm(GPA ~ FirstGen)
+summary(gpa.lm)
+```
+
+The p-value associated with the coefficient next to FirstGen is 0.0204. As such, we reject the null, we have convincing evidence that whether a student is a first generation college student or not is correlated with their GPA: first generation college students are estimated to have about 0.22867 less GPA points than an identical student that is not a first generation college student.
+
+### c
+```{r}
+gpa.glm <- glm(FirstGen ~ GPA, family = "binomial")
+summary(gpa.glm)
+detach()
+```
+
+_Random?_ Same as in the t-test
+
+_Independent?_ One student's GPA is likely not going to depend on others'.
+
+_Linear?_ Binary predictor means a linear model.
+
+_Big Sample?_ Our sample size of 220 is greater than 5.
+
+As the p-value of 0.023 is less than alpha = 0.05, we reject the null. We can conclude that GPA is a significant predictor of whether a student is a first generation college student or not. For each point increase in GPA, the odds that the student is a first generation college student decreases by about `r exp(-1.0381)`. Notably, this is the converse of the conclusions we got in (a) and (b).
+
+Let’s do a G Test to confirm our result.
+
+We get a p-value 0.021821 which is less than alpha = 0.05. This confirms the findings from our Wald test.
+
+## 5
+
+```{r}
+markets.df <- read.csv("Markets.csv", header = T, stringsAsFactors = T)
+attach(markets.df)
+```
+
+### a
+
+```{r}
+markets.djiachlm <- glm(Up ~ DJIAch, family = "binomial")
+summary(markets.djiachlm)
+length(markets.df$Up)
+```
+
+Because our p-value is 0.00146 which is less than alpha = 0.05, we reject the null. We have convincing evidence that for every unit change in the Monday result from New York, the odds that the Nikkei 225 go up will increase by a factor of `r exp(0.013215)`. This conclusion is based on three passed conditions:
+
+_Random?_ The stock market as a whole is determined by so many differing factors at many times that we can assume the data to be based on a probabilistic model. Furthermore, the null already assumes a random association between DJIAch and Up.
+
+_Independent?_  Day gains can be assumed to be independent as the news in one day is likely not to dramatically affect stocks the next day.
+
+_Linear?_ pain.
+
+```{r}
+linearcondition <- function(n, x, y) {
+  df <- data.frame("x"=x, "y"=y)
+  sorted.df <- df[order(df$x),]
+  x <- sorted.df$x
+  y <- sorted.df$y
+  x.mat <- matrix(x, ncol = n, nrow = length(x)/n, byrow = T)
+  x.means <- apply(x.mat, 1, mean)
+  y.mat <- matrix(y, ncol = n, nrow = length(x)/n, byrow = T)
+  y.yes <- apply(y.mat, 1, sum)
+  y.no <- n - y.yes
+  y.prop <- y.yes/(y.yes+y.no)
+  y.prop.adj <- (.5+y.yes)/(1+y.yes+y.no)
+  y.logit.adj <- log(y.prop.adj/(1-y.prop.adj))
+  emp.Log.tab <- as.table(cbind(x.means, y.yes, y.no, y.prop, y.prop.adj, y.logit.adj))
+  colnames(emp.Log.tab) <- c("GPA", "Yes", "No", "Proportion Yes", "Adjusted Proportion", "Empirical Logit")
+  print(knitr::kable(round(emp.Log.tab,3), align = c(rep("c",6)), row.names = FALSE))
+  plot(y.logit.adj~x.means, pch = 16,
+       xlab = "Explanatory", ylab = "Empirical Logit")
+  abline(lm(y.logit.adj~x.means))
+}
+linearcondition(7, DJIAch, Up)
+```
+
+That's a linear association.
+
+_Big Sample?_ Our sample size of 56 is greater than 5
+
+Let’s do a G test
+
+We get a p-value of 1.2847681^{-4} which is less than alpha = 0.05. Thus, our findings from the G test confirm our findings from the Wald test.
+
+### b
+
+```{r}
+markets.lagNiklm <- glm(Up ~ lagNik, family = "binomial")
+summary(markets.lagNiklm)
+```
+
+Because our p-value of 0.0903 is not less than alpha = 0.05, we fail to reject null. LagNik is not a significant predictor of the probability of the Japanese markets having an up day.
+
+Let’s check G test
+
+We get a p-value of 0.0784367 which is more than our alpha = 0.05. Thus, our findings in using the Wald test are corroborated.
+
+_Random?_ Again, the stock market as a whole is determined by so many differing factors at many times that we can assume the data to be based on a probabilistic model. Furthermore, the null already assumes a random association between lagNik and Up. Ultimately,
+
+_Independent?_ Again, it's reasonable to assume that results from one day will not affect the results of the next. These are changes, not absolute positions.
+
+_Linear?_
+
+```{r}
+linearcondition(7, lagNik, Up)
+detach()
+```
+
+The plot is very very very roughly linear.
+
+_Big Sample?_ Our sample size is 56 is greater than 5.
+
+### c
+DJIAch is a better predictor because we have evidence to suggest that it significantly predicts the probability of the Japanese stock markets to have an up day. We cannot say this for lagNik though, as its p-value was higher than our alpha level of 0.05.
+
+## 6
+
+```{r}
+kershaw.df <- read.csv("Kershaw.csv", header = T, stringsAsFactors = T)
+kershaw.df$ResultCode <- ifelse(kershaw.df$Result == "Pos", 1, 0)
+attach(kershaw.df)
+kershaw.lm <- glm(ResultCode ~ StartSpeed, family = "binomial")
+summary(kershaw.lm)
+```
+
+_Random?_ These pitches are from an entire season, and there are too many external factors over too many pitches that we can assume the data to be representative of a general 2013 Kershaw.
+
+_Independent?_ The success of one pitch is likely not going to be dependent on the successes of the pitch before it.
+
+_Linear?_
+
+```{r}
+linearcondition(length(kershaw.df$Result)/7, StartSpeed, ResultCode)
+```
+
+Looks linear.
+
+_Big Sample?_ Our sample size is 3402, which is bigger than 5.
+
+### a
+
+Our model is $\log{(\text{odds})} = -1.410 + 0.02135(StartSpeed)$, or $\hat{\pi} = \frac{e^{-1.410 + 0.02135(StartSpeed)}}{1 + e^{-1.410 + 0.02135(StartSpeed)}}$
+
+### b
+
+As 0.021235 > 0, it seems like faster pitches give more positive results.
+
+### c
+
+According to the model, `r toprobmodel(-1.410, 0.02135)(95) * 100`% of 95 mph Kershaw pitches have a positive result. This number is `r toprobmodel(-1.410, 0.02135)(75) * 100`% for 75mph pitches.
+
+### d
+
+Because the p-value associated with the coefficient by StartSpeed is approximately 0, we reject the null. We can conclude that StartSpeed is a significant predictor of the probability that a pitch has a positive result. For every one mph increase of a pitch, the odds that such pitch has a successful result increases by a factor of `r exp(0.0121235)`.
+
+## 7
+
+```{r}
+film.df <- read.csv("Film.csv", header = T, stringsAsFactors = T)
+attach(film.df)
+```
+
+_Random?_ Random sample.
+
+_Independent?_ One move review is likely not going to affect the next.
+
+_Big Sample?_ Our sample size of `r length(film.df$Good)` is greater than 5.
+
+_Linear?_
+
+```{r}
+linearcondition(10, Year, Good)
+```
+
+That does not look linear. As such, we will use the G test to determine significance.
+
+```{r}
+film.lm <- glm(Good ~ Year, family = "binomial")
+summary(film.lm)
+
+
+```
+
+Initially, it seems like Year is not a significant predictor as its slope is near 0, and its associated p-value is dramatically above 0.05. Checking with the G test, we get a p-value of `r 1 - pchisq(123.82 - 123.81, df = 1)` which is greater than an alpha level of 0.05. Thus, we can say that Year is not a significant predictor in explaining whether a movie is Good or not.
+
+## 8
+
+```{r}
+political.df <- read.csv("Political.csv", header = T, stringsAsFactors = T)
+political.df <- political.df[!is.na(political.df$Participate), ]
+attach(political.df)
+```
+
+_Random?_ Random sample.
+
+_Independent?_ The U.S. citizens’ responses were likely not influencing each other as these citizens live all across the US.
+
+_Linear?_
+
+```{r}
+y.yes <- tapply(Participate, Inform, sum)
+y.no <- tapply(Participate, Inform, function(x) {
+  return(length(x) - sum(x))
+})
+y.prop <- y.yes/(y.yes+y.no)
+y.prop.adj <- (.5+y.yes)/(1+y.yes+y.no)
+y.logit.adj <- log(y.prop.adj/(1-y.prop.adj))
+emp.Log.tab <- as.table(cbind(y.yes, y.no, y.prop, y.prop.adj, y.logit.adj))
+print(knitr::kable(round(emp.Log.tab,3), align = c(rep("c",6)), row.names = FALSE))
+plot(y.logit.adj~c(1, 2, 3, 4, 5), pch = 16,
+     xlab = "Explanatory", ylab = "Empirical Logit")
+abline(lm(y.logit.adj~c(1, 2, 3, 4, 5)))
+```
+
+Looks linear enough.
+
+_Big Sample?_ Our sample size of 59 is greater than 5.
+
+```{r}
+political.glm <- glm(Participate ~ Inform, family = "binomial")
+summary(political.glm)
+```
+
+According to the Wald test, the p-value is 0.215 which is more than our alpha = 0.05. We fail to reject the null: we do not have convincing evidence that more informed people have a higher chance of participating in the election.
+
+Doing the G test, we get a p-value of 0.2033709 which is greater than our alpha = 0.05. This confirms the result we obtained from the Wald test.
